@@ -3,9 +3,9 @@ server:
   address: 0.0.0.0
 spring:
   datasource:
-    url: jdbc:postgresql://217.199.252.124:5432/taskpilot_db
-    username: anton_user
-    password: anton22893
+    url: jdbc:postgresql://95.213.143.142:5432/users-dev
+    username: java_dev_user
+    password: YszGyMEZmV
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

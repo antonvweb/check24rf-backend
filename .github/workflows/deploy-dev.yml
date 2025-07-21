@@ -52,6 +52,6 @@ jobs:
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             sudo pm2 delete check24rfAPI-ip || true
-           sudo pm2 start java --name check24rfAPI-dev -- -jar target/taskPilotApo-1.0-SNAPSHOT.jar --spring.profiles.active=dev
+           sudo pm2 start java --name check24rfAPI-dev -- -jar target/check24rfAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev
             sudo pm2 save
           EOF

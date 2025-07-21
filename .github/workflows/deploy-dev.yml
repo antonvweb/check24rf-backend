@@ -1,0 +1,57 @@
+name: Deploy dev (Test)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 🧪 Debug ssh-agent
+        run: |
+          echo "🔍 Проверка добавленных SSH-ключей:"
+          ssh-add -l || echo "❌ Ключи не добавлены"
+
+      - name: 🧱 Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+        continue-on-error: false
+
+      - name: 🔌 Test SSH connection
+        run: |
+          echo "🔗 Пробуем подключиться к серверу..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
+
+      - name: Sync project to server
+        run: |
+          rsync -avz --delete --exclude .idea --exclude target ./ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+
+      - name: Build backend on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            set -e
+            cd ${{ secrets.DEPLOY_DEV_PATH }}
+            mvn clean package
+          EOF
+
+      - name: Restart backend server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            set -ex
+            cd ${{ secrets.DEPLOY_DEV_PATH }}
+            sudo pm2 delete check24rfAPI-ip || true
+           sudo pm2 start java --name check24rfAPI-dev -- -jar target/taskPilotApo-1.0-SNAPSHOT.jar --spring.profiles.active=dev
+            sudo pm2 save
+          EOF

@@ -26,14 +26,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletResponse res) {
-        service.authenticate(req, res);
-        return ResponseEntity.ok(new AuthResponse("Login success"));
+        String token = service.authenticate(req, res);
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(HttpServletRequest req, HttpServletResponse res) {
-        service.refreshToken(req, res);
-        return ResponseEntity.ok(new AuthResponse("Token refreshed"));
+        String newAccessToken  = service.refreshToken(req, res);
+        return ResponseEntity.ok(new AuthResponse(newAccessToken ));
     }
 
     @GetMapping("/validate")

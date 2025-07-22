@@ -14,7 +14,7 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**") // или "/**" чтобы разрешить на весь API
-                        .allowedOrigins("http://172.19.0.1:3000", "http://95.213.143.142")
+                        .allowedOrigins("http://172.19.0.1:3000", "http://95.213.143.142", "http://localhost:3000")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

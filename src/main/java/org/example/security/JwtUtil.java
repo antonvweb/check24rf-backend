@@ -1,10 +1,8 @@
 package org.example.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.example.entity.Role;
 import org.springframework.stereotype.Component;
 
@@ -45,11 +43,29 @@ public class JwtUtil {
 
     public boolean isAccessTokenValid(String token) {
         try {
-            String username = getUsername(token);
-            return !isExpired(token) && username != null && !username.isEmpty();
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            Claims claims = getClaims(token);
+            String username = claims.getSubject();
+            boolean expired = claims.getExpiration().before(new Date());
+
+            System.out.println("✅ Token subject: " + username);
+            System.out.println("📅 Expiration: " + claims.getExpiration());
+            System.out.println("⌛ Expired? " + expired);
+
+            return !expired && username != null && !username.isEmpty();
+
+        } catch (ExpiredJwtException e) {
+            System.out.println("❌ Token expired: " + e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            System.out.println("❌ Unsupported JWT: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            System.out.println("❌ Malformed JWT: " + e.getMessage());
+        } catch (SignatureException e) {
+            System.out.println("❌ Invalid JWT signature: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ Empty or null token: " + e.getMessage());
         }
+
+        return false;
     }
 
 }

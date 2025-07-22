@@ -12,14 +12,12 @@ import org.example.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.Map;
 
 @Service
 public class AuthService {
@@ -41,7 +39,7 @@ public class AuthService {
         userRepo.save(user);
     }
 
-    public void authenticate(LoginRequest req, HttpServletResponse response) {
+    public String authenticate(LoginRequest req, HttpServletResponse response) {
         User user = userRepo.findByLogin(req.getLogin())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
@@ -60,17 +58,17 @@ public class AuthService {
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        ResponseEntity.ok(Map.of("token", access));
+        return access;
     }
 
-
-    public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
+    public String refreshToken(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) throw new RuntimeException("No cookies");
 
         String token = Arrays.stream(cookies)
                 .filter(c -> c.getName().equals("refreshToken"))
-                .findFirst().map(Cookie::getValue)
+                .findFirst()
+                .map(Cookie::getValue)
                 .orElseThrow(() -> new RuntimeException("No refresh token"));
 
         if (jwtUtil.isExpired(token)) throw new RuntimeException("Refresh expired");
@@ -81,13 +79,16 @@ public class AuthService {
         String newAccess = jwtUtil.generateToken(login, role, ACCESS_EXPIRY);
         String newRefresh = jwtUtil.generateToken(login, role, REFRESH_EXPIRY);
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", newAccess)
-                .httpOnly(true).path("/").maxAge(ACCESS_EXPIRY / 1000).build();
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefresh)
-                .httpOnly(true).path("/api/auth/refresh").maxAge(REFRESH_EXPIRY / 1000).build();
+                .httpOnly(true)
+                .sameSite("Strict")
+                .path("/api/auth/refresh")
+                .maxAge(REFRESH_EXPIRY / 1000)
+                .build();
 
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return newAccess;
     }
 }
 

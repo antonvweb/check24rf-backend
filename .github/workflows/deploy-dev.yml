@@ -52,6 +52,6 @@ jobs:
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             sudo pm2 delete check24rfAPI-dev || true
-            sudo pm2 start java --name check24rfAPI-dev -- -jar target/check24rfAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev --output /var/log/check24rfAPI-dev.log --error /var/log/check24rfAPI-dev.err.log
+            pm2 start ecosystem.backend.config.js
             sudo pm2 save
           EOF

@@ -1,6 +1,6 @@
 package org.example.dto;
 
-public class AuthRequest {
+public class LoginRequest {
     private String login;
     private String password;
 

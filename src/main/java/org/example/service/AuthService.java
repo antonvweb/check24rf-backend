@@ -51,8 +51,9 @@ public class AuthService {
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refresh)
                 .httpOnly(true)
-                .sameSite("Strict")
-                .path("/api/auth/refresh")
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 
@@ -81,8 +82,9 @@ public class AuthService {
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefresh)
                 .httpOnly(true)
-                .sameSite("Strict")
-                .path("/api/auth/refresh")
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 

@@ -18,7 +18,8 @@ public class WebConfig {
                                 "http://localhost:3000",
                                 "http://127.0.0.1:3000",
                                 "http://172.19.0.1:3000",
-                                "http://95.213.143.142" // прод-сервер
+                                "http://95.213.143.142",
+                                "http://xn--24-mlcu7d.xn--p1ai"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

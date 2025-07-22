@@ -8,12 +8,14 @@ import oshi.hardware.GlobalMemory;
 import oshi.hardware.HardwareAbstractionLayer;
 
 import javax.sql.DataSource;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -64,23 +66,37 @@ public class SystemMetricsService {
         return Map.of("backendStatus", "UP");
     }
 
-    public Map<String, Object> getBackendLogs(){
-        try {
-            Path logPath = Paths.get("/var/log/check24rfAPI-dev.log");
-            List<String> logs = Files.readAllLines(logPath);
-            int from = Math.max(0, logs.size() - 10);
-            return Map.of("logs", logs.subList(from, logs.size()));
+    public Map<String, Object> getBackendLogs() {
+        Path logPath = Paths.get("/var/log/check24rfAPI-dev.log");
+        int maxLines = 1000;
+        try (BufferedReader reader = Files.newBufferedReader(logPath)) {
+            LinkedList<String> lastLines = new LinkedList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (lastLines.size() == maxLines) {
+                    lastLines.removeFirst();
+                }
+                lastLines.add(line);
+            }
+            return Map.of("logs", lastLines);
         } catch (IOException e) {
             return Map.of("logs", List.of("Не удалось прочитать логи"));
         }
     }
 
-    public Map<String, Object> getFrontendLogs(){
-        try {
-            Path logPath = Paths.get("/var/log/check24rf-ip.log");
-            List<String> logs = Files.readAllLines(logPath);
-            int from = Math.max(0, logs.size() - 10);
-            return Map.of("logs", logs.subList(from, logs.size()));
+    public Map<String, Object> getFrontendLogs() {
+        Path logPath = Paths.get("/var/log/check24rf-ip.log");
+        int maxLines = 1000;
+        try (BufferedReader reader = Files.newBufferedReader(logPath)) {
+            LinkedList<String> lastLines = new LinkedList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (lastLines.size() == maxLines) {
+                    lastLines.removeFirst();
+                }
+                lastLines.add(line);
+            }
+            return Map.of("logs", lastLines);
         } catch (IOException e) {
             return Map.of("logs", List.of("Не удалось прочитать логи"));
         }

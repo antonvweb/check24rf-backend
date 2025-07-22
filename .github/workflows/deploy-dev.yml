@@ -35,7 +35,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync project to server
-        run: |
+        run: | 
           rsync -avz --delete --exclude .idea --exclude target ./ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: Build backend on server
@@ -52,6 +52,7 @@ jobs:
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             sudo pm2 delete check24rfAPI-dev || true
-           sudo pm2 start java --name check24rfAPI-dev -- -jar target/check24rfAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev
+            sudo pm2 start "java -jar -X target/check24rfAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev" \
+            --name check24rfAPI-dev
             sudo pm2 save
           EOF

@@ -1,6 +1,7 @@
 package org.example.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -39,6 +40,16 @@ public class JwtUtil {
     public Role getRole(String token) {
         return Role.valueOf(getClaims(token).get("role", String.class));
     }
+
+    public boolean isAccessTokenValid(String token) {
+        try {
+            String username = getUsername(token);
+            return !isExpired(token) && username != null && !username.isEmpty();
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
 }
 
 

@@ -12,12 +12,14 @@ import org.example.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Map;
 
 @Service
 public class AuthService {
@@ -49,14 +51,18 @@ public class AuthService {
         String access = jwtUtil.generateToken(user.getLogin(), user.getRole(), ACCESS_EXPIRY);
         String refresh = jwtUtil.generateToken(user.getLogin(), user.getRole(), REFRESH_EXPIRY);
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", access)
-                .httpOnly(true).path("/").maxAge(ACCESS_EXPIRY / 1000).build();
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refresh)
-                .httpOnly(true).path("/api/auth/refresh").maxAge(REFRESH_EXPIRY / 1000).build();
+                .httpOnly(true)
+                .sameSite("Strict")
+                .path("/api/auth/refresh")
+                .maxAge(REFRESH_EXPIRY / 1000)
+                .build();
 
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        ResponseEntity.ok(Map.of("token", access));
     }
+
 
     public void refreshToken(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();

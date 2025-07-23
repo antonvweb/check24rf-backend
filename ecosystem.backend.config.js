@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "check24rfAPI-dev",                     // имя процесса
       script: "java",                              // запускаем java
-      args: "-jar target/check24rfAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev",  // параметры запуска
+      args: "-jar target/check24rfAdminAPI-1.0-SNAPSHOT.jar --spring.profiles.active=dev",  // параметры запуска
       cwd: "/var/www/check24rf/backend-dev/",              // рабочая директория, где лежит jar и target
       output: "/var/log/check24rfAPI-dev.log",     // stdout
       error: "/var/log/check24rfAPI-dev.err.log",  // stderr

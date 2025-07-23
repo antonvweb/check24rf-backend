@@ -1,5 +1,7 @@
 package org.example.config;
 
+import org.example.utils.CorsProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -8,19 +10,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig {
 
+    @Autowired
+    private CorsProperties corsProperties;
+
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // разрешаем на все эндпоинты
-                        .allowedOrigins(
-                                "http://localhost:3000",
-                                "http://127.0.0.1:3000",
-                                "http://172.19.0.1:3000",
-                                "http://95.213.143.142",
-                                "http://xn--24-mlcu7d.xn--p1ai"
-                        )
+                        .allowedOrigins(corsProperties.getAllowedOrigins().toArray(new String[0]))
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)

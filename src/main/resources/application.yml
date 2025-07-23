@@ -3,6 +3,7 @@ spring:
     active: dev # по умолчанию для разработки
 cors:
   allowed-origins:
+    - "http://172.19.0.1:3000"
     - "http://95.213.143.142"
     - "https://чек24.рф"
     - "https://www.чек24.рф"

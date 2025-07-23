@@ -19,7 +19,15 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(corsProperties.getAllowedOrigins().toArray(new String[0]))
+                        .allowedOrigins(
+                                "http://172.19.0.1:3000",
+                                "https://www.xn--24-mlcu7d.xn--p1ai",
+                                "https://чек24.рф",
+                                "https://www.чек24.рф",
+                                "https://api.чек24.рф",
+                                "https://xn--24-mlcu7d.xn--p1ai",
+                                "https://api.xn--24-mlcu7d.xn--p1ai"
+                        )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)

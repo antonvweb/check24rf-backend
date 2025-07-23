@@ -24,9 +24,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-dev/auth/**").permitAll()
-                        .requestMatchers("/api-dev/monitor/**").permitAll()
-                        .requestMatchers("/api-dev/admin/**").hasRole("ADMIN")
+                        .requestMatchers("auth/**").permitAll()
+                        .requestMatchers("monitor/**").permitAll()
+                        .requestMatchers("admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

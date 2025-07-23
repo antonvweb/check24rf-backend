@@ -23,7 +23,7 @@ public class WebConfig {
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)
-                        .maxAge(3600); // кэш preflight-запросов на 1 час
+                        .maxAge(3600);
             }
         };
     }

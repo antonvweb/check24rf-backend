@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/monitor")
+@RequestMapping("/api-dev/monitor")
 public class MonitorController {
 
     @Autowired

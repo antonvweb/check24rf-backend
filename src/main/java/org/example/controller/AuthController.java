@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api-dev/auth")
 public class AuthController {
     @Autowired private AuthService service;
     @Autowired private JwtUtil jwtUtil;

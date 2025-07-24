@@ -80,7 +80,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>org.example.authService.UserServiceApplication</mainClass>
-                    <finalName>userService</finalName>
+                    <finalName>authService</finalName>
                 </configuration>
                 <executions>
                     <execution>

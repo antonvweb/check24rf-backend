@@ -1,6 +1,16 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="FieldCanBeLocal" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="EXCLUDE_ANNOS">
+        <value>
+          <list size="1">
+            <item index="0" class="java.lang.String" itemvalue="jakarta.persistence.Column" />
+          </list>
+        </value>
+      </option>
+      <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
+    </inspection_tool>
     <inspection_tool class="NullableProblems" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="REPORT_NULLABLE_METHOD_OVERRIDES_NOTNULL" value="true" />
       <option name="REPORT_NOT_ANNOTATED_METHOD_OVERRIDES_NOTNULL" value="true" />
@@ -10,6 +20,57 @@
       <option name="REPORT_NOT_ANNOTATED_SETTER_PARAMETER" value="true" />
       <option name="REPORT_ANNOTATION_NOT_PROPAGATED_TO_OVERRIDERS" value="true" />
       <option name="REPORT_NULLS_PASSED_TO_NON_ANNOTATED_METHOD" value="true" />
+    </inspection_tool>
+    <inspection_tool class="VulnerableLibrariesLocal" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="isIgnoringEnabled" value="true" />
+      <option name="ignoredModules">
+        <list>
+          <option value="chech24rfapi" />
+          <option value="chech24rfapi" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+          <option value="authService" />
+        </list>
+      </option>
+      <option name="ignoredPackages">
+        <list>
+          <option value="org.springframework:spring-context:6.1.10" />
+          <option value="org.springframework.security:spring-security-crypto:6.3.1" />
+          <option value="ch.qos.logback:logback-classic:1.5.6" />
+          <option value="ch.qos.logback:logback-core:1.5.6" />
+          <option value="org.apache.tomcat.embed:tomcat-embed-core:10.1.25" />
+          <option value="org.springframework:spring-context:6.1.10" />
+          <option value="org.springframework:spring-web:6.1.10" />
+          <option value="org.springframework:spring-webmvc:6.1.10" />
+          <option value="org.springframework.security:spring-security-config:6.3.1" />
+          <option value="org.springframework.security:spring-security-core:6.3.1" />
+          <option value="org.springframework.security:spring-security-crypto:6.3.1" />
+          <option value="org.springframework.security:spring-security-web:6.3.1" />
+        </list>
+      </option>
+      <option name="ignoredReasons">
+        <list>
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+          <option value="Not exploitable" />
+        </list>
+      </option>
     </inspection_tool>
   </profile>
 </component>

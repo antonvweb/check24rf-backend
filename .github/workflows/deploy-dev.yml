@@ -35,7 +35,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync project to server
-        run: | 
+        run: |
           rsync -avz --delete --exclude .idea --exclude target ./ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: Build backend on server
@@ -43,15 +43,16 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
+            # Билдим весь проект
             mvn clean package
           EOF
 
-      - name: Restart backend server
+      - name: Restart backend services
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete check24rfAPI-dev || true
+            sudo pm2 delete adminPanelService-dev userService-dev || true
             sudo pm2 start ecosystem.backend.config.js
             sudo pm2 save
           EOF

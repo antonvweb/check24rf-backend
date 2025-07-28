@@ -17,7 +17,7 @@ module.exports = {
       }
     },
     {
-      name: "userService-dev",
+      name: "authService-dev",
       script: "java",
       args: "-jar authService/target/authService.jar --spring.profiles.active=dev",
       cwd: "/var/www/check24rf/backend-dev/",

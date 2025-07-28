@@ -1,12 +1,10 @@
 package org.example.authService.entity;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-@ConfigurationProperties(prefix = "smartcaptcha")
-@Data
 @Component
+@ConfigurationProperties(prefix = "smartcaptcha")
 public class SmartCaptchaProperties {
     private String serverKey;
     private String validateUrl;
@@ -15,7 +13,15 @@ public class SmartCaptchaProperties {
         return serverKey;
     }
 
+    public void setServerKey(String serverKey) {
+        this.serverKey = serverKey;
+    }
+
     public String getValidateUrl() {
         return validateUrl;
+    }
+
+    public void setValidateUrl(String validateUrl) {
+        this.validateUrl = validateUrl;
     }
 }

@@ -8,6 +8,8 @@ import org.example.authService.security.JwtUtil;
 import org.example.authService.service.AuthService;
 import org.example.authService.service.SmartCaptchaService;
 import org.example.authService.utils.IPUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,8 @@ public class AuthController {
     @Autowired private IPUtils ipUtils;
     @Autowired private SmartCaptchaService captchaService;
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequest req,
                                    HttpServletRequest request,  // Изменено с HttpServletResponse
@@ -36,6 +40,7 @@ public class AuthController {
 
     @PostMapping("/verify-captcha")
     public ResponseEntity<?> verifyCaptcha(@RequestBody @Valid CaptchaRequest req, HttpServletRequest request){
+        log.info("Captcha token received: {}", req.getCaptchaToken());
         // СНАЧАЛА проверяем каптчу
         String userIP = ipUtils.getClientIP(request);  // Теперь правильно используем request
         boolean captchaValid = captchaService.validateCaptchaSync(

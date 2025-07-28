@@ -3,9 +3,7 @@ package org.example.authService.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.example.authService.dto.AuthResponse;
-import org.example.authService.dto.LoginRequest;
-import org.example.authService.dto.VerifyRequest;
+import org.example.authService.dto.*;
 import org.example.authService.security.JwtUtil;
 import org.example.authService.service.AuthService;
 import org.example.authService.service.SmartCaptchaService;
@@ -30,6 +28,14 @@ public class AuthController {
                                    HttpServletRequest request,  // Изменено с HttpServletResponse
                                    HttpServletResponse response) {
 
+        // ПОТОМ аутентифицируем пользователя
+        String token = service.authenticate(req, response);
+
+        return ResponseEntity.ok(new AuthResponse(token));
+    }
+
+    @PostMapping("/verify-captcha")
+    public ResponseEntity<?> verifyCaptcha(@RequestBody @Valid CaptchaRequest req, HttpServletRequest request){
         // СНАЧАЛА проверяем каптчу
         String userIP = ipUtils.getClientIP(request);  // Теперь правильно используем request
         boolean captchaValid = captchaService.validateCaptchaSync(
@@ -42,10 +48,7 @@ public class AuthController {
                     .body(Map.of("error", "Captcha validation failed"));
         }
 
-        // ПОТОМ аутентифицируем пользователя
-        String token = service.authenticate(req, response);
-
-        return ResponseEntity.ok(new AuthResponse(token));
+        return ResponseEntity.ok(new CaptchaResponse(true));
     }
 
     @PostMapping("/send-code")

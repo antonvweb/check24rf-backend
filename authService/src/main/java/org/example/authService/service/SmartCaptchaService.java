@@ -61,10 +61,14 @@ public class SmartCaptchaService {
     // Синхронная версия для блокирующего кода
     public boolean validateCaptchaSync(String token, String userIP) {
         try {
-            return Boolean.TRUE.equals(validateCaptcha(token, userIP).block(Duration.ofSeconds(5)));
+            Boolean result = validateCaptcha(token, userIP)
+                    .defaultIfEmpty(false) // если Mono пустой
+                    .block(Duration.ofSeconds(5));
+            return Boolean.TRUE.equals(result);
         } catch (Exception e) {
             log.error("Captcha validation timeout or error", e);
-            return true; // Разрешаем доступ при ошибке
+            return true; // Или false — смотри ниже
         }
     }
+
 }

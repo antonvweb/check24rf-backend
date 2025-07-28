@@ -1,7 +1,15 @@
 server:
   port: 8082
   address: 0.0.0.0
+smartcaptcha:
+  server-key: ${SMARTCAPTCHA_SERVER_KEY:your-server-key-here}
+  validate-url: https://smartcaptcha.yandexcloud.net/validate
 spring:
+  webflux:
+    timeout:
+      read: 5s
+      write: 5s
+      connect: 3s
   redis:
     host: 95.213.143.142
     port: 6379
@@ -36,3 +44,10 @@ jwt:
     expiration: 3600000  # 1 час
   refresh-token:
     expiration: 604800000  # 7 дней
+security:
+  captcha:
+    enabled: true
+    required-endpoints:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/contact/submit

@@ -4,6 +4,7 @@ import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.authService.controller.AuthController;
+import org.example.authService.dto.CaptchaResponse;
 import org.example.authService.dto.SmartCaptchaResponse;
 import org.example.authService.entity.SmartCaptchaProperties;
 import org.slf4j.Logger;
@@ -48,9 +49,9 @@ public class SmartCaptchaService {
                     log.error("SmartCaptcha validation failed with status: {}", response.statusCode());
                     return Mono.error(new RuntimeException("Captcha validation error"));
                 })
-                .bodyToMono(SmartCaptchaResponse.class)
+                .bodyToMono(CaptchaResponse.class)
                 .doOnNext(response -> log.info("SmartCaptcha response: {}", response))
-                .map(SmartCaptchaResponse::isValid)
+                .map(CaptchaResponse::isValid)
                 .doOnSuccess(result -> log.debug("Captcha validation result: {}", result))
                 .doOnError(e -> log.error("Error during captcha validation", e))
                 .onErrorReturn(true);  // На ваше усмотрение, можно и false вернуть

@@ -2,7 +2,7 @@ server:
   port: 8082
   address: 0.0.0.0
 smartcaptcha:
-  server-key: ${SMARTCAPTCHA_SERVER_KEY:your-server-key-here}
+  server-key: ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f
   validate-url: https://smartcaptcha.yandexcloud.net/validate
 spring:
   webflux:

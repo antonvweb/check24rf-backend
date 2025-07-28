@@ -1,4 +1,4 @@
 package org.example.authService.dto;
 
-public record CaptchaResponse(boolean captchaValid) {
+public record CaptchaResponse(boolean valid) {
 }

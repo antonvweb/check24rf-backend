@@ -3,10 +3,12 @@ package org.example.authService.service;
 import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.authService.controller.AuthController;
 import org.example.authService.dto.SmartCaptchaResponse;
 import org.example.authService.entity.SmartCaptchaProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -21,6 +23,8 @@ public class SmartCaptchaService {
 
     @Autowired private SmartCaptchaProperties captchaProperties;
     @Autowired private WebClient webClient;
+
+    private static final Logger log = LoggerFactory.getLogger(SmartCaptchaService.class);
 
     public Mono<Boolean> validateCaptcha(String token, String userIP) {
         if (StringUtils.isBlank(token)) {
@@ -38,10 +42,14 @@ public class SmartCaptchaService {
                         .build())
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response -> {
+                    log.error("SmartCaptcha validation failed with status: {}", response.statusCode());
                     return Mono.error(new RuntimeException("Captcha validation error"));
                 })
                 .bodyToMono(SmartCaptchaResponse.class)
-                .map(SmartCaptchaResponse::isValid);
+                .map(SmartCaptchaResponse::isValid)
+                .doOnSuccess(result -> log.debug("Captcha validation result: {}", result))
+                .doOnError(e -> log.error("Error during captcha validation", e))
+                .onErrorReturn(true);
     }
 
     // Синхронная версия для блокирующего кода
@@ -49,6 +57,7 @@ public class SmartCaptchaService {
         try {
             return Boolean.TRUE.equals(validateCaptcha(token, userIP).block(Duration.ofSeconds(5)));
         } catch (Exception e) {
+            log.error("Captcha validation timeout or error", e);
             return true; // Разрешаем доступ при ошибке
         }
     }

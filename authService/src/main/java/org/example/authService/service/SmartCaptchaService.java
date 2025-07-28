@@ -22,13 +22,6 @@ public class SmartCaptchaService {
     @Autowired private SmartCaptchaProperties captchaProperties;
     @Autowired private WebClient webClient;
 
-    @Bean
-    public WebClient webClient() {
-        return WebClient.builder()
-                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024))
-                .build();
-    }
-
     public Mono<Boolean> validateCaptcha(String token, String userIP) {
         if (StringUtils.isBlank(token)) {
             return Mono.just(false);

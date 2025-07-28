@@ -27,17 +27,6 @@ public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @Valid LoginRequest req,
-                                   HttpServletRequest request,  // Изменено с HttpServletResponse
-                                   HttpServletResponse response) {
-
-        // ПОТОМ аутентифицируем пользователя
-        String token = service.authenticate(req, response);
-
-        return ResponseEntity.ok(new AuthResponse(token));
-    }
-
     @PostMapping("/verify-captcha")
     public ResponseEntity<?> verifyCaptcha(@RequestBody @Valid CaptchaRequest req, HttpServletRequest request){
         log.info("Captcha token received: {}", req.getCaptchaToken());
@@ -63,11 +52,48 @@ public class AuthController {
     }
 
     @PostMapping("/verify-code")
-    public ResponseEntity<String> verify(@RequestBody VerifyRequest request) {
-        boolean success = service.verifyCode(request.getPhoneNumber(), request.getCode());
-        return success
-                ? ResponseEntity.ok("Access allowed")
-                : ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid code");
+    public ResponseEntity<?> verify(@RequestBody @Valid VerifyRequest request,
+                                    HttpServletRequest httpRequest, HttpServletResponse response) {
+
+        String userIP = ipUtils.getClientIP(httpRequest);
+        log.info("🔍 Code verification request from IP: {}", userIP);
+        log.info("🔍 Request body: phone='{}', code='{}'",
+                request.getPhoneNumber(),
+                request.getCode());
+
+        try {
+            boolean success = service.verifyCode(request.getPhoneNumber(), request.getCode());
+
+            if (success) {
+                log.info("✅ Code verification successful for phone: {}", request.getPhoneNumber());
+
+                // Генерируем JWT токен после успешной верификации
+                String token = service.authenticate(request, response);
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Access allowed",
+                        "token", token,
+                        "phone", request.getPhoneNumber()
+                ));
+            } else {
+                log.warn("❌ Code verification failed for phone: {}", request.getPhoneNumber());
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(
+                                "error", "Invalid code",
+                                "code", "INVALID_VERIFICATION_CODE"
+                        ));
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Unexpected error during code verification", e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Internal server error",
+                            "code", "VERIFICATION_ERROR"
+                    ));
+        }
     }
 
     @PostMapping("/refresh")

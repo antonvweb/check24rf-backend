@@ -3,10 +3,12 @@ package org.example.authService.service;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.authService.dto.LoginRequest;
+import org.example.authService.dto.VerifyRequest;
 import org.example.authService.entity.User;
 import org.example.authService.repository.UserRepository;
 import org.example.authService.security.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,9 +30,10 @@ public class AuthService {
 
     @Value("${jwt.refresh-token.expiration:#{7*24*60*60*1000}}")
     private long REFRESH_EXPIRY;
+    private static final Logger log = LoggerFactory.getLogger(SmartCaptchaService.class);
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
 
-    public String authenticate(LoginRequest req, HttpServletResponse response) {
+    public String authenticate(VerifyRequest req, HttpServletResponse response) {
         User user = userRepo.findByPhoneNumber(req.getPhoneNumber())
                 .orElseGet(() -> {
                     User newUser = new User();
@@ -65,8 +68,59 @@ public class AuthService {
 
 
     public boolean verifyCode(String phone, String code) {
-        String redisCode = (String) redisTemplate.opsForValue().get(phone);
-        return code.equals(redisCode);
+        log.info("🔍 Verifying code for phone: {}", phone);
+        log.info("🔍 Received code: '{}'", code);
+
+        // Проверка входных параметров
+        if (phone == null || phone.trim().isEmpty()) {
+            log.warn("❌ Phone is null or empty");
+            return false;
+        }
+
+        if (code == null || code.trim().isEmpty()) {
+            log.warn("❌ Code is null or empty");
+            return false;
+        }
+
+        // Очистка входных данных
+        String cleanPhone = phone.trim();
+        String cleanCode = code.trim();
+
+        log.info("🔍 Clean phone: '{}', Clean code: '{}'", cleanPhone, cleanCode);
+
+        try {
+            // Получение кода из Redis
+            String redisCode = (String) redisTemplate.opsForValue().get(cleanPhone);
+            log.info("🔍 Redis code for phone '{}': '{}'", cleanPhone, redisCode);
+
+            if (redisCode == null) {
+                log.warn("❌ No code found in Redis for phone: {}", cleanPhone);
+                return false;
+            }
+
+            // Очистка кода из Redis
+            String cleanRedisCode = redisCode.trim();
+            log.info("🔍 Clean Redis code: '{}'", cleanRedisCode);
+
+            // Сравнение кодов
+            boolean isValid = cleanCode.equals(cleanRedisCode);
+            log.info("🔍 Code comparison result: {} ('{}' == '{}')", isValid, cleanCode, cleanRedisCode);
+
+            if (isValid) {
+                log.info("✅ Code verification successful for phone: {}", cleanPhone);
+                // Удаляем код из Redis после успешной проверки
+                redisTemplate.delete(cleanPhone);
+                log.info("🗑️ Code deleted from Redis for phone: {}", cleanPhone);
+            } else {
+                log.warn("❌ Code verification failed for phone: {}", cleanPhone);
+            }
+
+            return isValid;
+
+        } catch (Exception e) {
+            log.error("❌ Error during code verification for phone: {}", cleanPhone, e);
+            return false;
+        }
     }
 
     public String refreshToken(HttpServletRequest request, HttpServletResponse response) {

@@ -53,7 +53,7 @@ public class AuthController {
                     .body(Map.of("error", "Captcha validation failed"));
         }
 
-        return ResponseEntity.ok(new CaptchaResponse().isValid());
+        return ResponseEntity.ok(Map.of("status", "ok"));
     }
 
     @PostMapping("/send-code")

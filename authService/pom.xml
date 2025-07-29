@@ -103,7 +103,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>org.example.authService.UserServiceApplication</mainClass>
+                    <mainClass>org.example.authService.AuthServiceApplication</mainClass>
                     <finalName>authService</finalName>
                 </configuration>
                 <executions>

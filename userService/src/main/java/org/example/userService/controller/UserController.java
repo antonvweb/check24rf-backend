@@ -1,5 +1,7 @@
 package org.example.userService.controller;
 
+import org.example.userService.dto.UserResponse;
+import org.example.userService.repository.UserRepository;
 import org.example.userService.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
     @Autowired private UserService userService;
+    @Autowired private UserRepository userRepo;
 
     @GetMapping("/is-active")
     public ResponseEntity<?> getUserIsActive(@RequestHeader("Authorization") String authHeader){
@@ -29,4 +32,14 @@ public class UserController {
         ));
     }
 
+    @GetMapping("/user")
+    public ResponseEntity<UserResponse> getUser(@RequestHeader("Authorization") String authHeader){
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String token = authHeader.replace("Bearer ", "");
+
+        return ResponseEntity.ok(userService.getUser(token));
+    }
 }

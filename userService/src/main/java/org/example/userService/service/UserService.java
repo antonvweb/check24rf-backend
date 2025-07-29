@@ -58,4 +58,27 @@ public class UserService {
 
         return response;
     }
+
+    public boolean changeAltData(String type, String data, String token){
+        String userIdStr = jwtUtil.getUserId(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token - no userId"));
+
+        UUID userId = UUID.fromString(userIdStr);
+
+        User user = userRepo.findById(userId).
+                orElseThrow(() -> new IllegalArgumentException("Invalid token - no userId"));
+
+        switch (type){
+            case "phone":
+                user.setPhoneNumberAlt(data);
+                userRepo.save(user);
+                return true;
+            case "email":
+                user.setEmailAlt(data);
+                userRepo.save(user);
+                return true;
+            default:
+                return false;
+        }
+    }
 }

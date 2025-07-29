@@ -108,7 +108,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>org.example.authService.UserServiceApplication</mainClass>
-                    <finalName>authService</finalName>
+                    <finalName>userService</finalName>
                 </configuration>
                 <executions>
                     <execution>

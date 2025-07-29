@@ -20,11 +20,15 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     public boolean getUserIsActive(String token){
-        UUID userId = UUID.fromString(String.valueOf(jwtUtil.getUserId(token)));
+        String userIdStr = jwtUtil.getUserId(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token - no userId"));
+
+        UUID userId = UUID.fromString(userIdStr);
 
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         return user.isActive();
     }
+
 }

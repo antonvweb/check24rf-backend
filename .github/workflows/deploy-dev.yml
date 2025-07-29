@@ -44,7 +44,8 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             # Билдим весь проект
-            mvn clean package
+            mvn clean -U
+            mvn package
           EOF
 
       - name: Restart backend services

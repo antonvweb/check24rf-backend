@@ -30,7 +30,22 @@ module.exports = {
       env: {
         JAVA_OPTS: "-Xms512m -Xmx1024m",
         NODE_ENV: "production"
+     },
+     {
+      name: "userService-dev",
+      script: "java",
+      args: "-jar userService/target/userService.jar --spring.profiles.active=dev",
+      cwd: "/var/www/check24rf/backend-dev/",
+      output: "/var/log/userService-dev.log",
+      error: "/var/log/userService-dev.err.log",
+      merge_logs: true,
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      env: {
+        JAVA_OPTS: "-Xms512m -Xmx1024m",
+        NODE_ENV: "production"
       }
-    }
+      }
   ]
 };

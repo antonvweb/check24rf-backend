@@ -1,8 +1,10 @@
 
-package org.example.authService.entity;
+package org.example.userService.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -39,11 +41,6 @@ public class User {
 
     @Column(name = "is_active")
     private boolean isActive;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 
     public void setPhoneNumber(String phoneNumber){
         this.phoneNumber = phoneNumber;

@@ -92,7 +92,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response){
         Map<String, String> authData = service.authenticate(request, response);
-
         return ResponseEntity.ok(authData);
     }
 

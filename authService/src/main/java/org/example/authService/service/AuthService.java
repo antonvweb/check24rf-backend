@@ -31,7 +31,7 @@ public class AuthService {
 
     @Value("${jwt.refresh-token.expiration:#{7*24*60*60*1000}}")
     private long REFRESH_EXPIRY;
-    private static final Logger log = LoggerFactory.getLogger(SmartCaptchaService.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
 
     public Map<String, String> authenticate(LoginRequest req, HttpServletResponse response) {

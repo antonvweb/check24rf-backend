@@ -30,6 +30,7 @@ module.exports = {
       env: {
         JAVA_OPTS: "-Xms512m -Xmx1024m",
         NODE_ENV: "production"
+      }
      },
      {
       name: "userService-dev",
@@ -46,6 +47,6 @@ module.exports = {
         JAVA_OPTS: "-Xms512m -Xmx1024m",
         NODE_ENV: "production"
       }
-      }
+     }
   ]
 };

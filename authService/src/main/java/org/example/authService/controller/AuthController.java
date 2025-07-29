@@ -91,17 +91,15 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response){
-        String token = service.authenticate(request, response);
+        Map<String, String> authData = service.authenticate(request, response);
 
-        return ResponseEntity.ok(Map.of(
-                "token", token
-        ));
+        return ResponseEntity.ok(authData);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(HttpServletRequest req, HttpServletResponse res) {
+    public ResponseEntity<TokenResponse> refresh(HttpServletRequest req, HttpServletResponse res) {
         String newAccessToken  = service.refreshToken(req, res);
-        return ResponseEntity.ok(new AuthResponse(newAccessToken ));
+        return ResponseEntity.ok(new TokenResponse(newAccessToken));
     }
 
     @GetMapping("/validate")

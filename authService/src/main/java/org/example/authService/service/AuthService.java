@@ -4,7 +4,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.authService.dto.LoginRequest;
-import org.example.authService.dto.VerifyRequest;
 import org.example.authService.entity.User;
 import org.example.authService.repository.UserRepository;
 import org.example.authService.security.JwtUtil;
@@ -19,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
@@ -34,7 +34,7 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(SmartCaptchaService.class);
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
 
-    public String authenticate(LoginRequest req, HttpServletResponse response) {
+    public Map<String, String> authenticate(LoginRequest req, HttpServletResponse response) {
         User user = userRepo.findByPhoneNumber(req.getPhoneNumber())
                 .orElseGet(() -> {
                     User newUser = new User();
@@ -55,7 +55,10 @@ public class AuthService {
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        return accessToken;
+        return Map.of(
+                "token", accessToken,
+                "userId", user.getId().toString()
+        );
     }
 
     public void sendVerificationCode(String phoneNumber) {

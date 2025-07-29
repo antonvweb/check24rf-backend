@@ -223,9 +223,6 @@ public class JwtUtil {
                         .expiresAt(claims.getExpiration())
                         .build());
     }
-
-    // Вспомогательный класс для информации о токене
-
 }
 
 

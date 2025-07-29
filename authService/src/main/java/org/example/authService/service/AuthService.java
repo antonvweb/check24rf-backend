@@ -3,6 +3,7 @@ package org.example.authService.service;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.authService.dto.LoginRequest;
 import org.example.authService.dto.VerifyRequest;
 import org.example.authService.entity.User;
 import org.example.authService.repository.UserRepository;
@@ -33,7 +34,7 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(SmartCaptchaService.class);
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
 
-    public String authenticate(VerifyRequest req, HttpServletResponse response) {
+    public String authenticate(LoginRequest req, HttpServletResponse response) {
         User user = userRepo.findByPhoneNumber(req.getPhoneNumber())
                 .orElseGet(() -> {
                     User newUser = new User();

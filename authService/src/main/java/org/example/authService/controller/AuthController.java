@@ -66,14 +66,8 @@ public class AuthController {
 
             if (success) {
                 log.info("✅ Code verification successful for phone: {}", request.getPhoneNumber());
-
-                // Генерируем JWT токен после успешной верификации
-                String token = service.authenticate(request, response);
-
                 return ResponseEntity.ok(Map.of(
-                        "message", "Access allowed",
-                        "token", token,
-                        "phone", request.getPhoneNumber()
+                        "message", "Access allowed"
                 ));
             } else {
                 log.warn("❌ Code verification failed for phone: {}", request.getPhoneNumber());
@@ -84,7 +78,6 @@ public class AuthController {
                                 "code", "INVALID_VERIFICATION_CODE"
                         ));
             }
-
         } catch (Exception e) {
             log.error("❌ Unexpected error during code verification", e);
 
@@ -94,6 +87,15 @@ public class AuthController {
                             "code", "VERIFICATION_ERROR"
                     ));
         }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response){
+        String token = service.authenticate(request, response);
+
+        return ResponseEntity.ok(Map.of(
+                "token", token
+        ));
     }
 
     @PostMapping("/refresh")

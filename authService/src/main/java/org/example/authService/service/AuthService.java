@@ -17,10 +17,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class AuthService {
@@ -41,6 +38,9 @@ public class AuthService {
                     newUser.setPhoneNumber(req.getPhoneNumber());
                     return userRepo.save(newUser);
                 });
+
+        user.setActive(true);
+        userRepo.save(user);
 
         String accessToken = jwtUtil.generateAccessToken(user.getId().toString());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId().toString());

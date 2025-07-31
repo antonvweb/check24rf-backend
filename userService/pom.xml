@@ -107,7 +107,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>org.example.userService.BillingServiceApplication</mainClass>
+                    <mainClass>org.example.userService.UserServiceApplication</mainClass>
                     <finalName>userService</finalName>
                 </configuration>
                 <executions>

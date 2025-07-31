@@ -49,7 +49,6 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader) {
 
         try {
-            // Проверка заголовка авторизации
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ChangeAltDataResponse(false, "Отсутствует токен авторизации"));
@@ -57,7 +56,6 @@ public class UserController {
 
             String token = authHeader.replace("Bearer ", "");
 
-            // Вызов сервиса
             boolean isChanged = userService.changeAltData(request.getType(), request.getData(), token);
 
             if (isChanged) {

@@ -47,6 +47,22 @@ module.exports = {
         JAVA_OPTS: "-Xms512m -Xmx1024m",
         NODE_ENV: "production"
       }
+     },
+     {
+      name: "billingService-dev",
+      script: "java",
+      args: "-jar billingService/target/billingService.jar --spring.profiles.active=dev",
+      cwd: "/var/www/check24rf/backend-dev/",
+      output: "/var/log/billingService-dev.log",
+      error: "/var/log/billingService-dev.err.log",
+      merge_logs: true,
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      env: {
+       JAVA_OPTS: "-Xms512m -Xmx1024m",
+       NODE_ENV: "production"
+      }
      }
   ]
 };

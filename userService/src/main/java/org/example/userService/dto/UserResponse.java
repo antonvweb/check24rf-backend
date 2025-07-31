@@ -1,7 +1,5 @@
 package org.example.userService.dto;
 
-import java.time.LocalDateTime;
-
 public class UserResponse {
     public String phoneNumber;
 

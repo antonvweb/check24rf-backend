@@ -1,0 +1,14 @@
+server:
+  port: 8090
+  address: 0.0.0.0
+spring:
+  datasource:
+    url: jdbc:postgresql://217.199.252.124:5432/taskpilot_db
+    username: anton_user
+    password: anton22893
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect

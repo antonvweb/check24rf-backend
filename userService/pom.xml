@@ -97,7 +97,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -107,7 +106,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>org.example.userService.UserServiceApplication</mainClass>
+                    <mainClass>org.example.userService.BillingServiceApplication</mainClass>
                     <finalName>userService</finalName>
                 </configuration>
                 <executions>

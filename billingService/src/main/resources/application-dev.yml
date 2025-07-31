@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 8084
   address: 0.0.0.0
 smartcaptcha:
   server-key: ${SMARTCAPTCHA_SERVER_KEY:ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f}

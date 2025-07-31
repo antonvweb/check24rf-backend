@@ -1,10 +1,10 @@
 package org.example.userService.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.example.common.entity.User;
+import org.example.common.repository.UserRepository;
+import org.example.common.security.JwtUtil;
 import org.example.userService.dto.UserResponse;
-import org.example.userService.entity.User;
-import org.example.userService.repository.UserRepository;
-import org.example.userService.security.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

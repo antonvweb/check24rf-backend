@@ -1,0 +1,48 @@
+server:
+  port: 8083
+  address: 0.0.0.0
+smartcaptcha:
+  server-key: ${SMARTCAPTCHA_SERVER_KEY:ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f}
+  validate-url: https://smartcaptcha.yandexcloud.net/validate
+spring:
+  webflux:
+    timeout:
+      read: 5s
+      write: 5s
+      connect: 3s
+  datasource:
+    url: jdbc:postgresql://95.213.143.142:5432/users-dev
+    username: java_dev_user
+    password: YszGyMEZmV
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+cors:
+  allowed-origins:
+    - "http://172.19.0.1:3000"
+    - "http://95.213.143.142"
+    - "https://чек24.рф"
+    - "https://www.чек24.рф"
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+    - "https://api.чек24.рф"
+    - "https://api.xn--24-mlcu7d.xn--p1ai"
+jwt:
+  secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
+  access-token:
+    expiration: 3600000  # 1 час
+  refresh-token:
+    expiration: 604800000  # 7 дней
+security:
+  captcha:
+    enabled: true
+    required-endpoints:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/contact/submit

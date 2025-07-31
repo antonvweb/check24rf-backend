@@ -1,4 +1,4 @@
-package org.example.userService.entity;
+package org.example.common.entity;
 
 import java.util.Date;
 

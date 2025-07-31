@@ -1,10 +1,10 @@
-package org.example.billingService.security;
+package org.example.common.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
-import org.example.userService.entity.TokenInfo;
+import org.example.common.entity.TokenInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,4 +1,4 @@
-package org.example.billingService.utils;
+package org.example.common.utils;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

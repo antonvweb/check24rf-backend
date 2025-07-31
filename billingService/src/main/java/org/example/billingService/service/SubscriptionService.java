@@ -7,7 +7,6 @@ import org.example.billingService.entity.SubscriptionData;
 import org.example.billingService.entity.SubscriptionStatus;
 import org.example.billingService.entity.SubscriptionType;
 import org.example.billingService.repository.SubscriptionRepository;
-import org.example.userService.security.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

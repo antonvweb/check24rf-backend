@@ -1,10 +1,10 @@
 package org.example.userService.controller;
 
 import jakarta.validation.Valid;
+import org.example.common.repository.UserRepository;
 import org.example.userService.dto.ChangeAltDataRequest;
 import org.example.userService.dto.ChangeAltDataResponse;
 import org.example.userService.dto.UserResponse;
-import org.example.userService.repository.UserRepository;
 import org.example.userService.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

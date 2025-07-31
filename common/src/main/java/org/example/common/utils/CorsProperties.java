@@ -1,7 +1,6 @@
 package org.example.common.utils;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 

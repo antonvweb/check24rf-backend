@@ -1,6 +1,5 @@
 package org.example.billingService.config;
 
-
 import org.example.userService.utils.CorsProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

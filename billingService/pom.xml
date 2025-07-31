@@ -116,7 +116,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>org.example.userService.BillingServiceApplication</mainClass>
+                    <mainClass>org.example.billingService.BillingServiceApplication</mainClass>
                     <finalName>billingService</finalName>
                 </configuration>
                 <executions>

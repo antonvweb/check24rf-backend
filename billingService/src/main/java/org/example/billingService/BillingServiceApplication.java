@@ -1,8 +1,10 @@
 package org.example.billingService;
 
 import org.example.billingService.controller.SubscriptionController;
+import org.example.common.utils.CorsProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.HandlerMethod;
@@ -12,6 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.util.Map;
 
 @SpringBootApplication
+@EnableConfigurationProperties(CorsProperties.class)
 public class BillingServiceApplication {
     public static void main(String[] args) {
         System.out.println("=== ЗАПУСК BILLING SERVICE ===");

@@ -1,5 +1,9 @@
 package org.example.billingService.controller;
 
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.example.billingService.dto.CreateSubscriptionRequest;
 import org.example.billingService.dto.SubscriptionResponse;
@@ -9,28 +13,55 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/subscription")
+@Slf4j
 public class SubscriptionController extends BillingController {
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    private static final Logger log = LoggerFactory.getLogger(SubscriptionController.class);
+
 
     /**
      * Получение доступных типов подписки с ценами
      */
     @GetMapping("/types")
     public ResponseEntity<Map<String, Object>> getSubscriptionTypes() {
-        SubscriptionType[] types = SubscriptionType.values();
-        return ResponseEntity.ok(Map.of(
-                "subscriptionTypes", types,
-                "message", "Доступные типы подписки"
-        ));
+        log.info("=== Получен запрос на /api/billing/subscription/types ===");
+
+        try {
+            // Более безопасный способ работы с enum
+            SubscriptionType[] typesArray = SubscriptionType.values();
+            List<Map<String, Object>> typesList = new ArrayList<>();
+
+            for (SubscriptionType type : typesArray) {
+                Map<String, Object> typeInfo = new HashMap<>();
+                typeInfo.put("name", type.name());
+                typeInfo.put("displayName", type.toString()); // или type.getDisplayName() если есть
+                typesList.add(typeInfo);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("subscriptionTypes", typesList);
+            response.put("message", "Доступные типы подписки");
+
+            log.info("Возвращаем {} типов подписки", typesList.size());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Ошибка при получении типов подписки: {}", e.getMessage(), e);
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Внутренняя ошибка сервера");
+            errorResponse.put("message", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse);
+        }
     }
 
     /**

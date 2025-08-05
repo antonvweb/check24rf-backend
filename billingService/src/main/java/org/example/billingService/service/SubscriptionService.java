@@ -148,7 +148,7 @@ public class SubscriptionService {
      */
     @Scheduled(fixedRate = 3600000) // каждый час
     public void updateExpiredSubscriptions() {
-        List<SubscriptionData> expiredSubscriptions = subscriptionRepository.findExpiredSubscriptions(LocalDateTime.now());
+        List<SubscriptionData> expiredSubscriptions = subscriptionRepository.findExpiredSubscriptions(SubscriptionStatus.EXPIRED, LocalDateTime.now());
 
         for (SubscriptionData SubscriptionData : expiredSubscriptions) {
             SubscriptionData.setStatus(SubscriptionStatus.EXPIRED);

@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/subscription")
+@RequestMapping("/api/billing/subscription")
 @Slf4j
-public class SubscriptionController extends BillingController {
+public class SubscriptionController {
 
     @Autowired
     private SubscriptionService subscriptionService;

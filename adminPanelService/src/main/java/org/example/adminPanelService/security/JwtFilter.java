@@ -35,6 +35,7 @@ public class JwtFilter extends OncePerRequestFilter {
         if (token != null && !jwtUtil.isExpired(token)) {
             String username = jwtUtil.getUsername(token);
             Role role = jwtUtil.getRole(token);
+            System.out.println("User role - " + role.toString());
 
             UserDetails user = userRepo.findByLogin(username)
                     .map(u -> User.withUsername(username).password(u.getPassword()).roles(role.name()).build())

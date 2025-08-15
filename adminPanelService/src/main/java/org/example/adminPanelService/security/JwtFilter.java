@@ -32,14 +32,29 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
 
-        String token = Arrays.stream(Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))
-                .filter(c -> c.getName().equals("adminRefreshToken"))
-                .findFirst().map(Cookie::getValue).orElse(null);
+        String token = null;
 
-        if (token != null && !jwtUtil.isExpired(token)) {
+        // 1. Сначала ищем access token в Authorization header
+        String authHeader = req.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            log.info("Found access token in header");
+        }
+
+        // 2. Если нет в header, ищем refresh token в cookie
+        if (token == null) {
+            token = Arrays.stream(Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))
+                    .filter(c -> c.getName().equals("adminRefreshToken"))
+                    .findFirst().map(Cookie::getValue).orElse(null);
+            if (token != null) {
+                log.info("Found refresh token in cookie");
+            }
+        }
+
+        if (token != null && jwtUtil.isAccessTokenValid(token)) {
             String username = jwtUtil.getUsername(token);
             Role role = jwtUtil.getRole(token);
-           log.info("User role - {}", role.toString());
+            log.info("User: {} with role: {}", username, role);
 
             UserDetails user = userRepo.findByLogin(username)
                     .map(u -> User.withUsername(username).password(u.getPassword()).roles(role.name()).build())
@@ -55,5 +70,4 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 }
-
 

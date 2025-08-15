@@ -54,6 +54,7 @@ public class AuthService {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
+                .domain("xn--24-mlcu7d.xn--p1ai")
                 .sameSite("Lax") // или "Strict"
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
@@ -86,6 +87,7 @@ public class AuthService {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
+                .domain("xn--24-mlcu7d.xn--p1ai")
                 .sameSite("Lax")
                 .maxAge(Duration.ofDays(7))
                 .build();

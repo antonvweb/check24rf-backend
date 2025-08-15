@@ -15,3 +15,13 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+cors:
+  allowed-origins:
+    - "http://172.19.0.1:3000"
+    - "http://95.213.143.142"
+    - "https://чек24.рф"
+    - "https://www.чек24.рф"
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+    - "https://api.чек24.рф"
+    - "https://api.xn--24-mlcu7d.xn--p1ai"

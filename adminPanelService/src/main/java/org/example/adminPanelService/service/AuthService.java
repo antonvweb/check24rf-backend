@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Arrays;
 
 @Service
@@ -57,6 +58,7 @@ public class AuthService {
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 
+        System.out.println("Setting cookie: " + refreshCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         return access;
@@ -82,12 +84,13 @@ public class AuthService {
 
         ResponseCookie refreshCookie = ResponseCookie.from("adminRefreshToken", newRefresh)
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .sameSite("Lax")
-                .maxAge(REFRESH_EXPIRY / 1000)
+                .maxAge(Duration.ofDays(7))
                 .build();
 
+        System.out.println("Setting cookie: " + refreshCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         return newAccess;

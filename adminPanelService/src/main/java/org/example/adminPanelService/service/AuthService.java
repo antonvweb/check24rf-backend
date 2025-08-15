@@ -49,7 +49,7 @@ public class AuthService {
         String access = jwtUtil.generateToken(user.getLogin(), user.getRole(), ACCESS_EXPIRY);
         String refresh = jwtUtil.generateToken(user.getLogin(), user.getRole(), REFRESH_EXPIRY);
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refresh)
+        ResponseCookie refreshCookie = ResponseCookie.from("adminRefreshToken", refresh)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
@@ -67,7 +67,7 @@ public class AuthService {
         if (cookies == null) throw new RuntimeException("No cookies");
 
         String token = Arrays.stream(cookies)
-                .filter(c -> c.getName().equals("refreshToken"))
+                .filter(c -> c.getName().equals("adminRefreshToken"))
                 .findFirst()
                 .map(Cookie::getValue)
                 .orElseThrow(() -> new RuntimeException("No refresh token"));
@@ -80,7 +80,7 @@ public class AuthService {
         String newAccess = jwtUtil.generateToken(login, role, ACCESS_EXPIRY);
         String newRefresh = jwtUtil.generateToken(login, role, REFRESH_EXPIRY);
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefresh)
+        ResponseCookie refreshCookie = ResponseCookie.from("adminRefreshToken", newRefresh)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")

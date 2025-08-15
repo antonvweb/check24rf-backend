@@ -29,7 +29,7 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String token = Arrays.stream(Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))
-                .filter(c -> c.getName().equals("jwt"))
+                .filter(c -> c.getName().equals("adminRefreshToken"))
                 .findFirst().map(Cookie::getValue).orElse(null);
 
         if (token != null && !jwtUtil.isExpired(token)) {

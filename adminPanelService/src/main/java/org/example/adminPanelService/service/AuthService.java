@@ -53,7 +53,7 @@ public class AuthService {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
-                .sameSite("Lax") // или "Strict"
+                .sameSite("Strict") // или "Strict"
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 

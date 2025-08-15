@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.adminPanelService.entity.Role;
 import org.example.adminPanelService.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +26,8 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired private JwtUtil jwtUtil;
     @Autowired private UserRepository userRepo;
 
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
+
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
@@ -35,7 +39,7 @@ public class JwtFilter extends OncePerRequestFilter {
         if (token != null && !jwtUtil.isExpired(token)) {
             String username = jwtUtil.getUsername(token);
             Role role = jwtUtil.getRole(token);
-            System.out.println("User role - " + role.toString());
+           log.info("User role - {}", role.toString());
 
             UserDetails user = userRepo.findByLogin(username)
                     .map(u -> User.withUsername(username).password(u.getPassword()).roles(role.name()).build())

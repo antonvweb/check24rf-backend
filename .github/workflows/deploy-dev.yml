@@ -41,10 +41,13 @@ jobs:
           echo "🔍 Очищенный JSON: $clean_json"
           echo "$clean_json" > temp.json
 
-          # -c → compact JSON (в одну строку)
+          # Извлекаем модули из изменённых файлов
           modules=$(jq -c '[.[] 
             | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
             | split("/")[0]] | unique' temp.json)
+
+          # Добавляем common по дефолту, если его нет
+          modules=$(echo "$modules" | jq -c 'if index("common") == null then . + ["common"] else . end')
 
           echo "modules=$modules" >> $GITHUB_OUTPUT
           echo "🔍 Выходной параметр modules: $modules"
@@ -53,8 +56,6 @@ jobs:
         run: |
           echo "all_changed_files_json=${{ steps.detect.outputs.all_changed_files_json }}"
           echo "all_changed_files=${{ steps.detect.outputs.all_changed_files }}"
-  
-  
 
   deploy-common:
     needs: detect-changes

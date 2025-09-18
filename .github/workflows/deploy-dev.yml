@@ -9,7 +9,8 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      modules: ${{ steps.detect.outputs.modules }}
+      modules: ${{ steps.set-modules.outputs.modules || '[]' }}
+
     steps:
       - name: 📦 Checkout code
         uses: actions/checkout@v4
@@ -39,6 +40,12 @@ jobs:
           echo "🔍 Сырой вывод all_changed_files_json: ${{ steps.detect.outputs.all_changed_files_json }}"
 
           clean_json='${{ steps.detect.outputs.all_changed_files_json }}'
+
+          # Если строка пустая → заменяем на []
+          if [ -z "$clean_json" ]; then
+            clean_json="[]"
+          fi
+
           echo "🔍 Очищенный JSON: $clean_json"
           echo "$clean_json" > temp.json
 
@@ -48,6 +55,7 @@ jobs:
 
           echo "modules=$modules" >> $GITHUB_OUTPUT
           echo "🔍 Выходной параметр modules: $modules"
+  
 
   deploy-common:
     needs: detect-changes

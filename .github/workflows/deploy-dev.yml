@@ -30,15 +30,16 @@ jobs:
         run: |
           raw='${{ steps.detect.outputs.all_changed_files_json }}'
 
-          # Если json-вывод пустой → используем all_changed_files
           if [ -z "$raw" ]; then
             echo "⚠️ all_changed_files_json пустой, fallback на all_changed_files"
             raw='${{ steps.detect.outputs.all_changed_files }}'
           fi
 
-          # Теперь raw выглядит как JSON-массив строк
-          echo "🔍 Очищенный JSON: $raw"
-          echo "$raw" > temp.json
+          # Убираем экранирование кавычек
+          clean_json=$(echo "$raw" | sed 's/\\"/"/g')
+
+          echo "🔍 Очищенный JSON: $clean_json"
+          echo "$clean_json" > temp.json
 
           modules=$(jq -r '[.[] 
             | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 

@@ -35,13 +35,14 @@ jobs:
             raw='${{ steps.detect.outputs.all_changed_files }}'
           fi
 
-          # Убираем экранирование кавычек
+          # Убираем экранирование кавычек, если есть
           clean_json=$(echo "$raw" | sed 's/\\"/"/g')
 
           echo "🔍 Очищенный JSON: $clean_json"
           echo "$clean_json" > temp.json
 
-          modules=$(jq -r '[.[] 
+          # -c → compact JSON (в одну строку)
+          modules=$(jq -c '[.[] 
             | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
             | split("/")[0]] | unique' temp.json)
 

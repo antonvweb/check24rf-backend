@@ -36,28 +36,18 @@ jobs:
       - name: 📋 Output changed modules
         id: set-modules
         run: |
-          echo "🔍 Сырой вывод all_changed_files: ${{ steps.detect.outputs.all_changed_files }}"
+          echo "🔍 Сырой вывод all_changed_files_json: ${{ steps.detect.outputs.all_changed_files_json }}"
 
-          if [ -z "${{ steps.detect.outputs.all_changed_files }}" ]; then
-            echo "modules=[]" >> $GITHUB_OUTPUT
-            echo "🔍 Выходной параметр modules: []"
-          else
-            clean_json=$(echo '${{ steps.detect.outputs.all_changed_files }}')
+          clean_json='${{ steps.detect.outputs.all_changed_files_json }}'
+          echo "🔍 Очищенный JSON: $clean_json"
+          echo "$clean_json" > temp.json
 
-            # Если это строка (начинается с кавычки) → оборачиваем в массив
-            if echo "$clean_json" | grep -q '^"'; then
-              clean_json="[$clean_json]"
-            fi
+          modules=$(jq -r '[.[] 
+            | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
+            | split("/")[0]] | unique' temp.json)
 
-            echo "🔍 Очищенный JSON: $clean_json"
-            echo "$clean_json" > temp.json
-
-            modules=$(jq -r '[.[] | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) | split("/")[0]] | unique' temp.json)
-
-            echo "modules=$modules" >> $GITHUB_OUTPUT
-            echo "🔍 Выходной параметр modules: $modules"
-          fi
-  
+          echo "modules=$modules" >> $GITHUB_OUTPUT
+          echo "🔍 Выходной параметр modules: $modules"
 
   deploy-common:
     needs: detect-changes

@@ -31,12 +31,21 @@ jobs:
             checkRenderService/**
             billingService/**
             supportService/**
-          json: true # Выводим список изменённых модулей в формате JSON
+          json: true # Выводим список изменённых файлов в формате JSON
 
       - name: 📋 Output changed modules
+        id: set-modules
         run: |
-          echo "Changed modules: ${{ steps.detect.outputs.all_changed_files }}"
-          echo "modules=$(echo '${{ steps.detect.outputs.all_changed_files }}' | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique]')" >> $GITHUB_OUTPUT
+          echo "🔍 Список изменённых файлов: ${{ steps.detect.outputs.all_changed_files }}"
+          # Если список пуст, возвращаем пустой массив JSON
+          if [ -z "${{ steps.detect.outputs.all_changed_files }}" ]; then
+            echo "modules=[]" >> $GITHUB_OUTPUT
+          else
+            # Извлекаем уникальные имена модулей из путей
+            modules=$(echo '${{ steps.detect.outputs.all_changed_files }}' | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] | select(length > 0)')
+            echo "modules=$modules" >> $GITHUB_OUTPUT
+          fi
+          echo "🔍 Выходной параметр modules: $(cat $GITHUB_OUTPUT)"
 
   deploy-common:
     needs: detect-changes
@@ -257,7 +266,7 @@ jobs:
 
       - name: Sync notificationService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./notificationService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/notificationService/
+          rsync -avz --delete --exclude .idea --exclude target ./notificationService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/notificationService/
 
       - name: Build notificationService module on server
         run: |
@@ -295,15 +304,15 @@ jobs:
       - name: 🔌 Test SSH connection
         run: |
           echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} "echo ✅ SSH connection established"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync authService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./authService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/authService/
+          rsync -avz --delete --exclude .idea --exclude target ./authService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/authService/
 
       - name: Build authService module on server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/authService
             mvn clean -U
@@ -312,7 +321,7 @@ jobs:
 
       - name: Restart authService
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             sudo pm2 delete authService-dev || true
@@ -341,21 +350,21 @@ jobs:
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
         continue-on-error: false
 
       - name: 🔌 Test SSH connection
         run: |
           echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} "echo ✅ SSH connection established"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync checkService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./checkService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkService/
+          rsync -avz --delete --exclude .idea --exclude target ./checkService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkService/
 
       - name: Build checkService module on server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/checkService
             mvn clean -U
@@ -383,21 +392,21 @@ jobs:
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
         continue-on-error: false
 
       - name: 🔌 Test SSH connection
         run: |
           echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} "echo ✅ SSH connection established"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync checkRenderService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./checkRenderService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkRenderService/
+          rsync -avz --delete --exclude .idea --exclude target ./checkRenderService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkRenderService/
 
       - name: Build checkRenderService module on server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/checkRenderService
             mvn clean -U
@@ -425,21 +434,21 @@ jobs:
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
         continue-on-error: false
 
       - name: 🔌 Test SSH connection
         run: |
           echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} "echo ✅ SSH connection established"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync billingService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./billingService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/billingService/
+          rsync -avz --delete --exclude .idea --exclude target ./billingService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/billingService/
 
       - name: Build billingService module on server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/billingService
             mvn clean -U
@@ -448,7 +457,7 @@ jobs:
 
       - name: Restart billingService
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
             sudo pm2 delete billingService-dev || true
@@ -477,21 +486,21 @@ jobs:
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
         continue-on-error: false
 
       - name: 🔌 Test SSH connection
         run: |
           echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} "echo ✅ SSH connection established"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
 
       - name: Sync supportService module to server
         run: |
-          rsync -avz --delete --exclude .idea --exclude target ./supportService/ ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/supportService/
+          rsync -avz --delete --exclude .idea --exclude target ./supportService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/supportService/
 
       - name: Build supportService module on server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/supportService
             mvn clean -U

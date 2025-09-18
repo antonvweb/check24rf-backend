@@ -21,19 +21,21 @@ jobs:
         id: detect
         uses: tj-actions/changed-files@v45
         with:
-            base: origin/dev   # явно сравниваем с dev
-            json: true
+          base: origin/dev
+          fetch_depth: 0
+          json: true
 
-      - name: 📋 Output changed modules
+      - name: 📋 Extract modules
         id: set-modules
         run: |
-          echo "🔍 Сырой вывод all_changed_files_json: ${{ steps.detect.outputs.all_changed_files_json }}"
-
-          clean_json='${{ steps.detect.outputs.all_changed_files_json }}'
-
-          # Если строка пустая → заменяем на []
-          if [ -z "$clean_json" ]; then
-            clean_json="[]"
+          raw='${{ steps.detect.outputs.all_changed_files_json }}'
+          if [ -z "$raw" ]; then
+            echo "⚠️ all_changed_files_json пустой, fallback на all_changed_files"
+            raw='${{ steps.detect.outputs.all_changed_files }}'
+            # Преобразуем в массив jq
+            clean_json=$(echo $raw | jq -R 'split(" ")')
+          else
+            clean_json="$raw"
           fi
 
           echo "🔍 Очищенный JSON: $clean_json"

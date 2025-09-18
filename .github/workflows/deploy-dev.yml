@@ -152,7 +152,7 @@ jobs:
           EOF
 
   deploy-userService:
-    needs: detect-changes
+    needs: [detect-changes, deploy-common]
     if: contains(fromJson(needs.detect-changes.outputs.modules), 'userService')
     runs-on: ubuntu-latest
     steps:

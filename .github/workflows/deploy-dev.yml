@@ -45,13 +45,18 @@ jobs:
             # Извлекаем JSON массив
             clean_json=$(echo "${{ steps.detect.outputs.all_changed_files }}" | grep -o '\[.*\]' || echo "[]")
             echo "🔍 Очищенный JSON: $clean_json"
+            # Сохраняем clean_json в файл для надежной передачи в jq
+            echo "$clean_json" > temp.json
             # Извлекаем уникальные имена модулей
-            modules=$(echo "$clean_json" | jq -r '[.[] | if test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/") then split("/")[0] else empty end | unique] // []')
+            modules=$(jq -r '[.[] | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) | split("/")[0] | unique] // []' temp.json)
             echo "modules=$modules" >> $GITHUB_OUTPUT
             echo "🔍 Выходной параметр modules: $modules"
+            # Дополнительная отладка: содержимое temp.json
+            echo "🔍 Содержимое temp.json:"
+            cat temp.json
           fi
-            echo "🔍 Содержимое GITHUB_OUTPUT:"
-            cat $GITHUB_OUTPUT
+          echo "🔍 Содержимое GITHUB_OUTPUT:"
+          cat $GITHUB_OUTPUT
 
   deploy-common:
     needs: detect-changes

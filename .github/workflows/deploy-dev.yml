@@ -42,11 +42,11 @@ jobs:
             echo "modules=[]" >> $GITHUB_OUTPUT
             echo "🔍 Выходной параметр modules: []"
           else
-            # Пробуем разобрать JSON, игнорируя возможный текст до/после
+            # Извлекаем JSON массив
             clean_json=$(echo "${{ steps.detect.outputs.all_changed_files }}" | grep -o '\[.*\]' || echo "[]")
             echo "🔍 Очищенный JSON: $clean_json"
             # Извлекаем уникальные имена модулей
-            modules=$(echo "$clean_json" | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] // []')
+            modules=$(echo "$clean_json" | jq -r '[.[] | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) | split("/")[0] | unique] // []')
             echo "modules=$modules" >> $GITHUB_OUTPUT
             echo "🔍 Выходной параметр modules: $modules"
           fi

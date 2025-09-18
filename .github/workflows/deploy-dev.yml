@@ -15,24 +15,14 @@ jobs:
       - name: 📦 Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # Нужно для сравнения изменений между коммитами
+          fetch-depth: 0 # Нужно для сравнения изменений между коммитами
 
       - name: 🔍 Detect changed modules
         id: detect
         uses: tj-actions/changed-files@v45
         with:
-          files: |
-            common/**
-            adminPanelService/**
-            userService/**
-            archiveService/**
-            notificationService/**
-            authService/**
-            checkService/**
-            checkRenderService/**
-            billingService/**
-            supportService/**
-          json: true # Выводим список изменённых файлов в формате JSON
+            base: origin/dev   # явно сравниваем с dev
+            json: true
 
       - name: 📋 Output changed modules
         id: set-modules
@@ -55,6 +45,12 @@ jobs:
 
           echo "modules=$modules" >> $GITHUB_OUTPUT
           echo "🔍 Выходной параметр modules: $modules"
+
+      - name: 🔍 Debug all changes
+        run: |
+          echo "all_changed_files_json=${{ steps.detect.outputs.all_changed_files_json }}"
+          echo "all_changed_files=${{ steps.detect.outputs.all_changed_files }}"
+  
   
 
   deploy-common:

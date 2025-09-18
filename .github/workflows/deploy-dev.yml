@@ -36,24 +36,22 @@ jobs:
       - name: 📋 Output changed modules
         id: set-modules
         run: |
-          echo "🔍 Список изменённых файлов: ${{ steps.detect.outputs.all_changed_files }}"
+          echo "🔍 Сырой вывод all_changed_files: ${{ steps.detect.outputs.all_changed_files }}"
           # Проверяем, пустой ли all_changed_files
           if [ -z "${{ steps.detect.outputs.all_changed_files }}" ]; then
             echo "modules=[]" >> $GITHUB_OUTPUT
             echo "🔍 Выходной параметр modules: []"
           else
-            # Удаляем любой текст перед JSON, если он есть, и обрабатываем JSON
-            clean_json=$(echo "${{ steps.detect.outputs.all_changed_files }}" | sed 's/.*\[/[/')
+            # Пробуем разобрать JSON, игнорируя возможный текст до/после
+            clean_json=$(echo "${{ steps.detect.outputs.all_changed_files }}" | grep -o '\[.*\]' || echo "[]")
+            echo "🔍 Очищенный JSON: $clean_json"
             # Извлекаем уникальные имена модулей
-            modules=$(echo "$clean_json" | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] | select(length > 0)')
-            # Если модули найдены, записываем их, иначе пустой массив
-            if [ -n "$modules" ]; then
-              echo "modules=$modules" >> $GITHUB_OUTPUT
-            else
-              echo "modules=[]" >> $GITHUB_OUTPUT
-            fi
-            echo "🔍 Выходной параметр modules: $(cat $GITHUB_OUTPUT)"
+            modules=$(echo "$clean_json" | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] // []')
+            echo "modules=$modules" >> $GITHUB_OUTPUT
+            echo "🔍 Выходной параметр modules: $modules"
           fi
+          echo "🔍 Содержимое GITHUB_OUTPUT:"
+          cat $GITHUB_OUTPUT
 
   deploy-common:
     needs: detect-changes

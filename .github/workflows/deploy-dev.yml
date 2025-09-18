@@ -96,6 +96,7 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}/common
             mvn clean -U
+            mvn install
             mvn package
           EOF
 

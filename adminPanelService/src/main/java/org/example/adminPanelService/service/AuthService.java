@@ -59,7 +59,6 @@ public class AuthService {
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 
-        System.out.println("Setting cookie: " + refreshCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         return access;
@@ -92,7 +91,6 @@ public class AuthService {
                 .maxAge(Duration.ofDays(7))
                 .build();
 
-        System.out.println("Setting cookie: " + refreshCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         return newAccess;

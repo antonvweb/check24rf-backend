@@ -37,15 +37,23 @@ jobs:
         id: set-modules
         run: |
           echo "🔍 Список изменённых файлов: ${{ steps.detect.outputs.all_changed_files }}"
-          # Если список пуст, возвращаем пустой массив JSON
+          # Проверяем, пустой ли all_changed_files
           if [ -z "${{ steps.detect.outputs.all_changed_files }}" ]; then
             echo "modules=[]" >> $GITHUB_OUTPUT
+            echo "🔍 Выходной параметр modules: []"
           else
-            # Извлекаем уникальные имена модулей из путей
-            modules=$(echo '${{ steps.detect.outputs.all_changed_files }}' | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] | select(length > 0)')
-            echo "modules=$modules" >> $GITHUB_OUTPUT
+            # Удаляем любой текст перед JSON, если он есть, и обрабатываем JSON
+            clean_json=$(echo "${{ steps.detect.outputs.all_changed_files }}" | sed 's/.*\[/[/')
+            # Извлекаем уникальные имена модулей
+            modules=$(echo "$clean_json" | jq -r '[.[] | select(. | startswith("common/") or startswith("adminPanelService/") or startswith("userService/") or startswith("archiveService/") or startswith("notificationService/") or startswith("authService/") or startswith("checkService/") or startswith("checkRenderService/") or startswith("billingService/") or startswith("supportService/")) | split("/")[0] | unique] | select(length > 0)')
+            # Если модули найдены, записываем их, иначе пустой массив
+            if [ -n "$modules" ]; then
+              echo "modules=$modules" >> $GITHUB_OUTPUT
+            else
+              echo "modules=[]" >> $GITHUB_OUTPUT
+            fi
+            echo "🔍 Выходной параметр modules: $(cat $GITHUB_OUTPUT)"
           fi
-          echo "🔍 Выходной параметр modules: $(cat $GITHUB_OUTPUT)"
 
   deploy-common:
     needs: detect-changes

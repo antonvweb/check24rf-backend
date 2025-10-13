@@ -25,7 +25,7 @@ public class McoController {
             @RequestParam String logoPath) {
 
         String partnerId = mcoService.initializePartner(logoPath);
-        return ResponseEntity.ok("Партнер зарегистрирован как: " + partnerId);
+        return ResponseEntity.ok("Партнер зарегистрирован: " + partnerId);
     }
 
     /**

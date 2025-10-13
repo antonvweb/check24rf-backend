@@ -1,5 +1,6 @@
 package org.example.mcoService.config;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,13 +24,10 @@ import java.security.NoSuchAlgorithmException;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class SoapConfig {
 
     private final McoProperties mcoProperties;
-
-    public SoapConfig(McoProperties mcoProperties) {
-        this.mcoProperties = mcoProperties;
-    }
 
     @Bean
     public Jaxb2Marshaller marshaller() {

@@ -32,7 +32,7 @@ public class McoService {
             PostPlatformRegistrationResponse response = apiClient.registerPartner(
                     properties.getPartner().getName(),
                     "Описание вашего сервиса кешбэка",
-                    "https://your-site.com",
+                    "https://xn--24-mlcu7d.xn--p1ai/",
                     logoBytes,
                     properties.getPartner().getInn(),
                     "79991234567"

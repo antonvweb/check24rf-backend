@@ -8,7 +8,6 @@ import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.client.support.interceptor.ClientInterceptor;
 import org.springframework.ws.context.MessageContext;
 import org.springframework.ws.soap.SoapMessage;
-import org.springframework.ws.transport.WebServiceMessageSender;
 import org.springframework.ws.transport.http.HttpComponentsMessageSender;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -26,8 +25,11 @@ import java.security.NoSuchAlgorithmException;
 @Configuration
 public class SoapConfig {
 
-    private McoProperties mcoProperties;
-    private WebServiceMessageSender httpComponentsMessageSender;
+    private final McoProperties mcoProperties;
+
+    public SoapConfig(McoProperties mcoProperties) {
+        this.mcoProperties = mcoProperties;
+    }
 
     @Bean
     public Jaxb2Marshaller marshaller() {
@@ -37,10 +39,13 @@ public class SoapConfig {
     }
 
     @Bean
-    public WebServiceTemplate webServiceTemplate() throws Exception{
+    public WebServiceTemplate webServiceTemplate() throws Exception {
         WebServiceTemplate template = new WebServiceTemplate();
-        template.setMessageSender(httpComponentsMessageSender);
+        template.setMarshaller(marshaller());
+        template.setUnmarshaller(marshaller());
+        template.setMessageSender(httpComponentsMessageSender()); // вызов метода, а не поле
 
+        // interceptor для добавления токена
         ClientInterceptor tokenInterceptor = new ClientInterceptor() {
             @Override
             public boolean handleRequest(MessageContext messageContext) {
@@ -59,19 +64,9 @@ public class SoapConfig {
                 return true;
             }
 
-            @Override
-            public boolean handleResponse(MessageContext messageContext) {
-                return true;
-            }
-
-            @Override
-            public boolean handleFault(MessageContext messageContext) {
-                return true;
-            }
-
-            @Override
-            public void afterCompletion(MessageContext messageContext, Exception ex) {
-            }
+            @Override public boolean handleResponse(MessageContext messageContext) { return true; }
+            @Override public boolean handleFault(MessageContext messageContext) { return true; }
+            @Override public void afterCompletion(MessageContext messageContext, Exception ex) { }
         };
 
         template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
@@ -80,17 +75,12 @@ public class SoapConfig {
 
     @Bean
     public HttpComponentsMessageSender httpComponentsMessageSender() throws Exception {
-
-        HttpComponentsMessageSender messageSender = new HttpComponentsMessageSender();
-        messageSender.setHttpClient(httpClient());
-
-        return messageSender;
+        HttpComponentsMessageSender sender = new HttpComponentsMessageSender();
+        sender.setHttpClient(httpClient());
+        return sender;
     }
 
-    private CloseableHttpClient httpClient()
-            throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-
-        // ⚠️ Только для теста — доверяет всем сертификатам
+    private CloseableHttpClient httpClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         SSLContext sslContext = new SSLContextBuilder()
                 .loadTrustMaterial(null, (chain, authType) -> true)
                 .build();
@@ -106,3 +96,4 @@ public class SoapConfig {
                 .build();
     }
 }
+

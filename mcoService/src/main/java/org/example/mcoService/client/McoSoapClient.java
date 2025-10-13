@@ -11,8 +11,8 @@ import org.springframework.ws.client.core.WebServiceTemplate;
 @RequiredArgsConstructor
 public class McoSoapClient {
 
-    private final WebServiceTemplate webServiceTemplate;
-    private final McoProperties mcoProperties;
+    private WebServiceTemplate webServiceTemplate;
+    private McoProperties mcoProperties;
 
     /**
      * Универсальный метод для отправки SOAP запросов

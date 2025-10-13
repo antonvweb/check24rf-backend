@@ -1,21 +1,17 @@
 module.exports = {
   apps: [
   {
-        name: "mcoService-dev",
-        script: "java",
-        args: "-jar mcoService/target/mcoService.jar --spring.profiles.active=dev",
-        cwd: "/var/www/check24rf/backend-dev/",
-        output: "/var/log/mcoService-dev.log",
-        error: "/var/log/mcoService-dev.err.log",
-        merge_logs: true,
-        autorestart: true,
-        watch: false,
-        max_restarts: 10,
-        env: {
-          JAVA_OPTS: "-Xms512m -Xmx1024m",
-          NODE_ENV: "production"
-        }
-      },
+    name: "mcoService-dev",
+    script: "target/mcoService.jar",
+    interpreter: "java",
+    args: "--spring.profiles.active=dev",
+    cwd: "/var/www/check24rf/backend-dev/mcoService",
+    env: {
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+    },
+    autorestart: true,
+    watch: false
+  },
     {
       name: "adminPanelService-dev",
       script: "java",

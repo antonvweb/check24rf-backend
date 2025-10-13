@@ -17,10 +17,8 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class McoService {
 
-    @Autowired
-    private McoApiClient apiClient;
-    @Autowired
-    private McoProperties properties;
+    private final McoApiClient apiClient;
+    private final McoProperties properties;
 
     /**
      * Инициализация партнера в системе

@@ -80,7 +80,7 @@ public class SystemMetricsService {
             }
             return Map.of("logs", lastLines);
         } catch (IOException e) {
-            return Map.of("logs", List.of("Не удалось прочитать логи"));
+            return Map.of("logs", List.of("Не удалось прочитать лог"));
         }
     }
 

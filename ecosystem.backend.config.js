@@ -1,5 +1,21 @@
 module.exports = {
   apps: [
+  {
+        name: "mceService-dev",
+        script: "java",
+        args: "-jar mceService/target/mceService.jar --spring.profiles.active=dev",
+        cwd: "/var/www/check24rf/backend-dev/",
+        output: "/var/log/mceService-dev.log",
+        error: "/var/log/mceService-dev.err.log",
+        merge_logs: true,
+        autorestart: true,
+        watch: false,
+        max_restarts: 10,
+        env: {
+          JAVA_OPTS: "-Xms512m -Xmx1024m",
+          NODE_ENV: "production"
+        }
+      },
     {
       name: "adminPanelService-dev",
       script: "java",

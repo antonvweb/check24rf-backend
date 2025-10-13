@@ -1,7 +1,6 @@
 package org.example.mcoService.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
@@ -38,7 +37,7 @@ public class SoapConfig {
     }
 
     @Bean
-    public WebServiceTemplate webServiceTemplate() {
+    public WebServiceTemplate webServiceTemplate() throws Exception{
         WebServiceTemplate template = new WebServiceTemplate();
         template.setMessageSender(httpComponentsMessageSender);
 
@@ -80,8 +79,7 @@ public class SoapConfig {
     }
 
     @Bean
-    public HttpComponentsMessageSender httpComponentsMessageSender()
-            throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    public HttpComponentsMessageSender httpComponentsMessageSender() throws Exception {
 
         HttpComponentsMessageSender messageSender = new HttpComponentsMessageSender();
         messageSender.setHttpClient(httpClient());

@@ -37,14 +37,8 @@ public class SoapConfig {
     }
 
     @Bean
-    public WebServiceTemplate webServiceTemplate() throws Exception {
-        WebServiceTemplate template = new WebServiceTemplate();
-        template.setMarshaller(marshaller());
-        template.setUnmarshaller(marshaller());
-        template.setMessageSender(httpComponentsMessageSender()); // вызов метода, а не поле
-
-        // interceptor для добавления токена
-        ClientInterceptor tokenInterceptor = new ClientInterceptor() {
+    public ClientInterceptor tokenInterceptor() {
+        return new ClientInterceptor() {
             @Override
             public boolean handleRequest(MessageContext messageContext) {
                 if (messageContext.getRequest() instanceof SoapMessage soapMessage) {
@@ -61,24 +55,30 @@ public class SoapConfig {
                 }
                 return true;
             }
-
             @Override public boolean handleResponse(MessageContext messageContext) { return true; }
             @Override public boolean handleFault(MessageContext messageContext) { return true; }
             @Override public void afterCompletion(MessageContext messageContext, Exception ex) { }
         };
-
-        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
-        return template;
     }
 
     @Bean
-    public HttpComponentsMessageSender httpComponentsMessageSender() throws Exception {
-        HttpComponentsMessageSender sender = new HttpComponentsMessageSender();
-        sender.setHttpClient(httpClient());
-        return sender;
+    public WebServiceTemplate webServiceTemplate(HttpComponentsMessageSender messageSender) throws Exception {
+        WebServiceTemplate template = new WebServiceTemplate();
+        template.setMarshaller(marshaller());
+        template.setUnmarshaller(marshaller());
+        template.setMessageSender(messageSender); // теперь Spring подставит bean
+        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor()});
+        return template;
     }
 
-    private CloseableHttpClient httpClient() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+
+    @Bean(destroyMethod = "shutdown")
+    public PoolingHttpClientConnectionManager connectionManager() {
+        return new PoolingHttpClientConnectionManager();
+    }
+
+    @Bean
+    public CloseableHttpClient httpClient(PoolingHttpClientConnectionManager cm) throws Exception {
         SSLContext sslContext = new SSLContextBuilder()
                 .loadTrustMaterial(null, (chain, authType) -> true)
                 .build();
@@ -89,9 +89,18 @@ public class SoapConfig {
         );
 
         return HttpClients.custom()
-                .setConnectionManager(new PoolingHttpClientConnectionManager())
                 .setSSLSocketFactory(socketFactory)
+                .setConnectionManager(cm)
+                .disableContentCompression()
                 .build();
     }
+
+    @Bean
+    public HttpComponentsMessageSender httpComponentsMessageSender(CloseableHttpClient httpClient) {
+        HttpComponentsMessageSender sender = new HttpComponentsMessageSender();
+        sender.setHttpClient(httpClient);
+        return sender;
+    }
+
 }
 

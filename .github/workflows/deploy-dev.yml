@@ -43,7 +43,7 @@ jobs:
 
           # Извлекаем модули из изменённых файлов
           modules=$(jq -c '[.[] 
-            | select(test("^(common|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
+            | select(test("^(common|mcoService|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
             | split("/")[0]] | unique' temp.json)
 
           # Добавляем common по дефолту, если его нет

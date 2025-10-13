@@ -1,12 +1,12 @@
 module.exports = {
   apps: [
   {
-        name: "mceService-dev",
+        name: "mcoService-dev",
         script: "java",
-        args: "-jar mceService/target/mceService.jar --spring.profiles.active=dev",
+        args: "-jar mcoService/target/mcoService.jar --spring.profiles.active=dev",
         cwd: "/var/www/check24rf/backend-dev/",
-        output: "/var/log/mceService-dev.log",
-        error: "/var/log/mceService-dev.err.log",
+        output: "/var/log/mcoService-dev.log",
+        error: "/var/log/mcoService-dev.err.log",
         merge_logs: true,
         autorestart: true,
         watch: false,

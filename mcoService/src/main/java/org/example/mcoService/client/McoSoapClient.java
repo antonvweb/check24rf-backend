@@ -5,11 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.ws.client.core.WebServiceTemplate;
-import org.springframework.ws.client.support.interceptor.ClientInterceptor;
-import org.springframework.ws.context.MessageContext;
-import org.springframework.ws.soap.SoapMessage;
-
-import javax.xml.namespace.QName;
 
 @Slf4j
 @Component

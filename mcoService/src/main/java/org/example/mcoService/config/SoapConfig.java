@@ -27,9 +27,7 @@ import java.security.NoSuchAlgorithmException;
 @Configuration
 public class SoapConfig {
 
-    @Autowired
     private McoProperties mcoProperties;
-    @Autowired
     private WebServiceMessageSender httpComponentsMessageSender;
 
     @Bean

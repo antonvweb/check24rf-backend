@@ -6,6 +6,7 @@ import org.example.mcoService.dto.request.GetReceiptsTapeRequest;
 import org.example.mcoService.dto.request.PostBindPartnerRequest;
 import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -57,7 +58,7 @@ public class McoApiClient {
     /**
      * Подключение покупателя к партнеру
      */
-    public void bindUser(String phoneNumber) {
+    public PostBindPartnerResponse bindUser(String phoneNumber) {  // Измените void на возврат response
         log.info("Подключение пользователя: {}", phoneNumber);
 
         String requestId = UUID.randomUUID().toString();
@@ -71,11 +72,14 @@ public class McoApiClient {
                 .requireNoActiveRequests(false)
                 .build();
 
-        soapClient.sendSoapRequest(
+        PostBindPartnerResponse response = soapClient.sendSoapRequest(
                 request,
-                Object.class, // Ответ можно определить по аналогии
+                PostBindPartnerResponse.class,  // Теперь типизировано
                 "PostBindPartnerRequest"
         );
+
+        log.info("Заявка отправлена, MessageId: {}", response.getMessageId());
+        return response;  // Верните для дальнейшего опроса
     }
 
     /**

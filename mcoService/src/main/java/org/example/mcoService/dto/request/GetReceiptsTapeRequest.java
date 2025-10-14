@@ -11,8 +11,8 @@ import jakarta.xml.bind.annotation.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "GetReceiptsTapeRequest",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/kkt/DrPartnersIntegrationService/v0.1")
+@XmlRootElement(name = "PostPlatformRegistrationRequest",
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetReceiptsTapeRequest {
 

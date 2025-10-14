@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,13 +30,11 @@ public class McoService {
         try {
             byte[] logoBytes = Files.readAllBytes(Path.of(logoPath));
 
-            String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
-
             PostPlatformRegistrationResponse response = apiClient.registerPartner(
                     properties.getPartner().getName(),
                     "Описание вашего сервиса кешбэка",
                     "https://xn--24-mlcu7d.xn--p1ai/",
-                    base64Logo.getBytes(StandardCharsets.UTF_8), // ✅ вот здесь передаём Base64-строку в байтах
+                    logoBytes, // ✅ вот здесь передаём Base64-строку в байтах
                     properties.getPartner().getInn(),
                     "79991234567"
             );
@@ -52,16 +51,11 @@ public class McoService {
     /**
      * Подключение пользователя
      */
-    public void connectUser(String phone) {
-        // Валидация формата телефона
-        if (!phone.matches("^7\\d{10}$")) {
-            throw new IllegalArgumentException(
-                    "Неверный формат телефона. Ожидается: 79998887766"
-            );
-        }
-
-        apiClient.bindUser(phone);
-        log.info("Заявка на подключение пользователя {} отправлена", phone);
+    public PostBindPartnerResponse connectUser(String phone) {  // Возвращайте response
+        // Валидация...
+        PostBindPartnerResponse response = apiClient.bindUser(phone);
+        log.info("Заявка на подключение пользователя {} отправлена, MessageId: {}", phone, response.getMessageId());
+        return response;  // Сохраните MessageId для опроса статуса позже
     }
 
     /**

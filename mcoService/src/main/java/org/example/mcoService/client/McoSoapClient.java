@@ -8,7 +8,7 @@ import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.soap.SoapMessage;
 import org.springframework.ws.transport.context.TransportContext;
 import org.springframework.ws.transport.context.TransportContextHolder;
-import org.springframework.ws.transport.http.HttpComponentsConnection;
+import org.springframework.ws.transport.http.HttpComponents5Connection;
 
 @Slf4j
 @Component
@@ -30,13 +30,11 @@ public class McoSoapClient {
                     message -> {
                         if (message instanceof SoapMessage soapMessage) {
                             TransportContext context = TransportContextHolder.getTransportContext();
-                            HttpComponentsConnection connection =
-                                    (HttpComponentsConnection) context.getConnection();
+                            HttpComponents5Connection connection = (HttpComponents5Connection) context.getConnection();
                             connection.addRequestHeader("FNS-OpenApi-Token", mcoProperties.getApi().getToken());
                         }
                     }
             );
-
 
             log.debug("Получен ответ: {}", response.getClass().getSimpleName());
             return responseClass.cast(response);

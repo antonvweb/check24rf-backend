@@ -20,8 +20,6 @@ public class McoSoapClient {
     public <T> T sendSoapRequest(Object request, Class<T> responseClass, String soapAction) {
         try {
             log.debug("Отправка SOAP запроса: {}", request.getClass().getSimpleName());
-
-            // Просто используем уже настроенный бин
             Object response = webServiceTemplate.marshalSendAndReceive(
                     mcoProperties.getApi().getBaseUrl(),
                     request

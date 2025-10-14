@@ -37,14 +37,14 @@
             <artifactId>jaxb-runtime</artifactId>
         </dependency>
 
-        <!-- Apache HttpClient для более гибких HTTP запросов -->
+        <!-- ВАЖНО: Apache HttpClient 5.x вместо 4.x -->
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.14</version>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.2.1</version>
         </dependency>
 
-        <!-- Lombok (опционально, для упрощения кода) -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -52,6 +52,7 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- WebFlux (если нужен) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -69,6 +70,7 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Ваш общий модуль -->
         <dependency>
             <groupId>org.example</groupId>
             <artifactId>common</artifactId>

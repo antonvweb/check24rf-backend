@@ -52,7 +52,7 @@ public class SoapConfig {
                     try {
                         soapMessage.getSoapHeader()
                                 .addHeaderElement(new QName(
-                                        "urn://x-artefacts-gnivc-ru/ais3/kkt/DrPartnersIntegrationService/v0.1",
+                                        "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1",
                                         "FNS-OpenApi-Token"
                                 ))
                                 .setText(mcoProperties.getApi().getToken());
@@ -84,13 +84,11 @@ public class SoapConfig {
             Jaxb2Marshaller marshaller,
             HttpComponents5MessageSender messageSender,
             ClientInterceptor tokenInterceptor) {
-
         WebServiceTemplate template = new WebServiceTemplate();
         template.setMarshaller(marshaller);
         template.setUnmarshaller(marshaller);
         template.setMessageSender(messageSender);
-        //template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
-
+        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor}); // Включите интерсептор
         return template;
     }
 

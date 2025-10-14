@@ -29,9 +29,8 @@ public class McoSoapClient {
                     request,
                     message -> {
                         if (message instanceof SoapMessage soapMessage) {
-                            TransportContext context = TransportContextHolder.getTransportContext();
-                            HttpComponents5Connection connection = (HttpComponents5Connection) context.getConnection();
-                            connection.addRequestHeader("FNS-OpenApi-Token", mcoProperties.getApi().getToken());
+                            // Токен теперь обрабатывается интерсептором, нет необходимости добавлять HTTP-заголовок
+                            soapMessage.setSoapAction(soapAction); // Опционально: задайте SOAPAction, если требуется
                         }
                     }
             );

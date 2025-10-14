@@ -53,7 +53,7 @@ mco:
     timeout: 30000
   partner:
     inn: "5610238469"  # Ваш ИНН
-    name: "чек24.рф"
+    name: "ЧЕК24.РФ"
     type: "PARTNER"
 logging:
   level:

@@ -46,6 +46,7 @@ public class McoApiClient {
                 .hidden(false)
                 .build();
 
+
         return soapClient.sendSoapRequest(
                 request,
                 PostPlatformRegistrationResponse.class,

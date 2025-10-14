@@ -9,8 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -27,11 +29,13 @@ public class McoService {
         try {
             byte[] logoBytes = Files.readAllBytes(Path.of(logoPath));
 
+            String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
+
             PostPlatformRegistrationResponse response = apiClient.registerPartner(
                     properties.getPartner().getName(),
                     "Описание вашего сервиса кешбэка",
                     "https://xn--24-mlcu7d.xn--p1ai/",
-                    logoBytes,
+                    base64Logo.getBytes(StandardCharsets.UTF_8), // ✅ вот здесь передаём Base64-строку в байтах
                     properties.getPartner().getInn(),
                     "79991234567"
             );

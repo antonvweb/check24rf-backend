@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.ws.client.core.WebServiceTemplate;
+import org.springframework.ws.soap.SoapMessage;
 
 @Slf4j
 @Component
@@ -22,7 +23,8 @@ public class McoSoapClient {
             log.debug("Отправка SOAP запроса: {}", request.getClass().getSimpleName());
             Object response = webServiceTemplate.marshalSendAndReceive(
                     mcoProperties.getApi().getBaseUrl(),
-                    request
+                    request,
+                    message -> ((SoapMessage) message).setSoapAction("PostPlatformRegistrationRequest")
             );
 
             log.debug("Получен ответ: {}", response.getClass().getSimpleName());

@@ -13,7 +13,6 @@ import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
 import org.apache.hc.core5.http.config.Registry;
 import org.apache.hc.core5.http.config.RegistryBuilder;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
-import org.apache.hc.core5.util.TimeValue;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,8 +25,6 @@ import org.springframework.ws.transport.http.HttpComponents5MessageSender;
 
 import javax.net.ssl.SSLContext;
 import javax.xml.namespace.QName;
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Configuration
@@ -50,13 +47,16 @@ public class SoapConfig {
             public boolean handleRequest(MessageContext messageContext) {
                 if (messageContext.getRequest() instanceof SoapMessage soapMessage) {
                     try {
+                        // Определяем пространство имен на основе SOAPAction
+                        String soapAction = soapMessage.getSoapAction();
+                        String namespace = soapAction != null && soapAction.contains("SmzIntegrationService") ?
+                                "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1" :
+                                "urn://x-artefacts-gnivc-ru/ais3/kkt/DrPartnersIntegrationService/v0.1";
+
                         soapMessage.getSoapHeader()
-                                .addHeaderElement(new QName(
-                                        "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1",
-                                        "FNS-OpenApi-Token"
-                                ))
+                                .addHeaderElement(new QName(namespace, "FNS-OpenApi-Token"))
                                 .setText(mcoProperties.getApi().getToken());
-                        log.debug("Токен добавлен в SOAP заголовок");
+                        log.debug("Токен добавлен в SOAP заголовок с namespace: {}", namespace);
                     } catch (Exception e) {
                         log.error("Ошибка добавления токена в SOAP-заголовок", e);
                     }
@@ -88,7 +88,7 @@ public class SoapConfig {
         template.setMarshaller(marshaller);
         template.setUnmarshaller(marshaller);
         template.setMessageSender(messageSender);
-        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor}); // Включите интерсептор
+        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
         return template;
     }
 
@@ -96,7 +96,7 @@ public class SoapConfig {
     public HttpClient httpClient() {
         try {
             SSLContext sslContext = SSLContextBuilder.create()
-                    .loadTrustMaterial((chain, authType) -> true) // доверяем всем сертификатам (только для DEV)
+                    .loadTrustMaterial((chain, authType) -> true) // Доверяем всем сертификатам (только для DEV)
                     .build();
 
             SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
@@ -104,13 +104,12 @@ public class SoapConfig {
                     NoopHostnameVerifier.INSTANCE
             );
 
-            Registry<org.apache.hc.client5.http.socket.ConnectionSocketFactory> socketFactoryRegistry =
-                    RegistryBuilder.<org.apache.hc.client5.http.socket.ConnectionSocketFactory>create()
+            Registry<ConnectionSocketFactory> socketFactoryRegistry =
+                    RegistryBuilder.<ConnectionSocketFactory>create()
                             .register("https", sslSocketFactory)
                             .register("http", PlainConnectionSocketFactory.getSocketFactory())
                             .build();
 
-            // ✅ Современный способ конфигурации пула соединений
             PoolingHttpClientConnectionManager connectionManager =
                     PoolingHttpClientConnectionManagerBuilder.create()
                             .setSSLSocketFactory(sslSocketFactory)
@@ -126,10 +125,9 @@ public class SoapConfig {
 
             return HttpClients.custom()
                     .setConnectionManager(connectionManager)
-                    .disableContentCompression()     // ✅ отключаем gzip/deflate
-                    .disableAutomaticRetries()       // не дублировать запросы
+                    .disableContentCompression() // Отключаем gzip/deflate
+                    .disableAutomaticRetries()
                     .build();
-
         } catch (Exception e) {
             throw new RuntimeException("Ошибка создания HTTP клиента", e);
         }
@@ -137,7 +135,6 @@ public class SoapConfig {
 
     @Bean
     public HttpComponents5MessageSender httpComponents5MessageSender(HttpClient httpClient) {
-        // Таймауты уже заданы в самом HttpClient
         return new HttpComponents5MessageSender(httpClient);
     }
 }

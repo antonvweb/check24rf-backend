@@ -41,7 +41,7 @@ public class McoApiClient {
                 .type("PARTNER")
                 .description(description)
                 .transitionLink(transitionLink)
-                .image(logoImage)
+                .image(logoImage != null ? logoImage : new byte[0]) // Защита от null
                 .inns(Collections.singletonList(inn))
                 .phone(phone)
                 .hidden(false)
@@ -51,7 +51,7 @@ public class McoApiClient {
         return soapClient.sendSoapRequest(
                 request,
                 PostPlatformRegistrationResponse.class,
-                "PostPlatformRegistrationRequest"
+                "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1/PostPlatformRegistration"
         );
     }
 

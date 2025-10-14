@@ -28,6 +28,10 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
+        if (req.getRequestURI().startsWith("/api/mco")) {
+            chain.doFilter(req, res); // Пропустить для SOAP-эндпоинтов
+            return;
+        }
 
         String token = Arrays.stream(Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))
                 .filter(c -> c.getName().equals("accessToken"))

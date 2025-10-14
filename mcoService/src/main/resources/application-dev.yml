@@ -59,3 +59,4 @@ logging:
   level:
     com.example.mcoService: DEBUG
     org.apache.http: DEBUG
+    springframework.ws: DEBUG

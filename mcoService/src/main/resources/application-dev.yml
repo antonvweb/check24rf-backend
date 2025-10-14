@@ -52,7 +52,7 @@ mco:
     token: chek24_eTkloRYx8
     timeout: 30000
   partner:
-    inn: "1234567890"  # Ваш ИНН
+    inn: "5610238469"  # Ваш ИНН
     name: "чек24.рф"
     type: "PARTNER"
 logging:

@@ -6,6 +6,9 @@ import org.example.mcoService.config.McoProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.soap.SoapMessage;
+import org.springframework.ws.transport.context.TransportContext;
+import org.springframework.ws.transport.context.TransportContextHolder;
+import org.springframework.ws.transport.http.HttpComponentsConnection;
 
 @Slf4j
 @Component
@@ -24,8 +27,16 @@ public class McoSoapClient {
             Object response = webServiceTemplate.marshalSendAndReceive(
                     mcoProperties.getApi().getBaseUrl(),
                     request,
-                    message -> ((SoapMessage) message).setSoapAction("PostPlatformRegistrationRequest")
+                    message -> {
+                        if (message instanceof SoapMessage soapMessage) {
+                            TransportContext context = TransportContextHolder.getTransportContext();
+                            HttpComponentsConnection connection =
+                                    (HttpComponentsConnection) context.getConnection();
+                            connection.addRequestHeader("FNS-OpenApi-Token", mcoProperties.getApi().getToken());
+                        }
+                    }
             );
+
 
             log.debug("Получен ответ: {}", response.getClass().getSimpleName());
             return responseClass.cast(response);

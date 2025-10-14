@@ -89,7 +89,7 @@ public class SoapConfig {
         template.setMarshaller(marshaller);
         template.setUnmarshaller(marshaller);
         template.setMessageSender(messageSender);
-        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
+        //template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
 
         return template;
     }
@@ -128,8 +128,8 @@ public class SoapConfig {
 
             return HttpClients.custom()
                     .setConnectionManager(connectionManager)
-                    .evictExpiredConnections()
-                    .evictIdleConnections(TimeValue.of(5, TimeUnit.MINUTES))
+                    .disableContentCompression()     // ✅ отключаем gzip/deflate
+                    .disableAutomaticRetries()       // не дублировать запросы
                     .build();
 
         } catch (Exception e) {

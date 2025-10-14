@@ -21,10 +21,6 @@ public class GetReceiptsTapeResponse {
     @XmlElement(name = "Receipt")
     private List<Receipt> receipts;
 
-    public List<Receipt> getReceipts() {
-        return receipts;
-    }
-
     @Data
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class Receipt {

@@ -11,11 +11,11 @@ import jakarta.xml.bind.annotation.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "PostPlatformRegistrationRequest",
+@XmlRootElement(name = "GetReceiptsTapeRequest",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetReceiptsTapeRequest {
 
     @XmlElement(name = "Marker", required = true)
-    private String marker; // S_FROM_END или S_FROM_BEGINNING для первого запроса
+    private String marker;
 }

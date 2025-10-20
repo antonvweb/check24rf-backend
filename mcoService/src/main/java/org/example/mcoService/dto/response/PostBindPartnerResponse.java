@@ -5,7 +5,7 @@ import jakarta.xml.bind.annotation.*;
 import java.time.LocalDateTime;
 
 @Data
-@XmlRootElement(name = "PostPlatformRegistrationRequest",
+@XmlRootElement(name = "PostBindPartnerRequest",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerResponse {

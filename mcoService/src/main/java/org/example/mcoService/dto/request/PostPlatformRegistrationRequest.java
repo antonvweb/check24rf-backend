@@ -21,7 +21,7 @@ public class PostPlatformRegistrationRequest {
     private String name;
 
     @XmlElement(name = "Type", required = true)
-    private String type; // PARTNER
+    private String type;
 
     @XmlElement(name = "Description")
     private String description;
@@ -33,7 +33,7 @@ public class PostPlatformRegistrationRequest {
     private String text;
 
     @XmlElement(name = "Image", required = true)
-    private byte[] image; // Base64 encoded image
+    private String image; // Изменено на String для Base64
 
     @XmlElementWrapper(name = "INNs")
     @XmlElement(name = "INN")
@@ -43,7 +43,7 @@ public class PostPlatformRegistrationRequest {
     private String phone;
 
     @XmlElement(name = "ImageFullscreen")
-    private byte[] imageFullscreen;
+    private String imageFullscreen; // Также Base64
 
     @XmlElement(name = "Hidden")
     private Boolean hidden;

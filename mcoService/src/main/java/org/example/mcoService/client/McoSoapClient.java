@@ -29,8 +29,7 @@ public class McoSoapClient {
                     request,
                     message -> {
                         if (message instanceof SoapMessage soapMessage) {
-                            // Токен теперь обрабатывается интерсептором, нет необходимости добавлять HTTP-заголовок
-                            soapMessage.setSoapAction(soapAction); // Опционально: задайте SOAPAction, если требуется
+                            soapMessage.setSoapAction(soapAction);
                         }
                     }
             );

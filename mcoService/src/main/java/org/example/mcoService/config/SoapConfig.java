@@ -47,7 +47,6 @@ public class SoapConfig {
             public boolean handleRequest(MessageContext messageContext) {
                 if (messageContext.getRequest() instanceof SoapMessage soapMessage) {
                     try {
-                        // Определяем пространство имен на основе SOAPAction
                         String soapAction = soapMessage.getSoapAction();
                         String namespace = soapAction != null && soapAction.contains("SmzIntegrationService") ?
                                 "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1" :
@@ -59,6 +58,7 @@ public class SoapConfig {
                         log.debug("Токен добавлен в SOAP заголовок с namespace: {}", namespace);
                     } catch (Exception e) {
                         log.error("Ошибка добавления токена в SOAP-заголовок", e);
+                        return false;
                     }
                 }
                 return true;
@@ -88,7 +88,9 @@ public class SoapConfig {
         template.setMarshaller(marshaller);
         template.setUnmarshaller(marshaller);
         template.setMessageSender(messageSender);
-        template.setInterceptors(new ClientInterceptor[]{tokenInterceptor});
+        template.setInterceptors(new ClientInterceptor[]{
+                tokenInterceptor
+        });
         return template;
     }
 
@@ -125,8 +127,11 @@ public class SoapConfig {
 
             return HttpClients.custom()
                     .setConnectionManager(connectionManager)
-                    .disableContentCompression() // Отключаем gzip/deflate
+                    // .disableContentCompression() // Уберите эту строку для теста
                     .disableAutomaticRetries()
+                    .addRequestInterceptorFirst((request, entity, context) -> {
+                        request.removeHeaders("Content-Length");
+                    })
                     .build();
         } catch (Exception e) {
             throw new RuntimeException("Ошибка создания HTTP клиента", e);

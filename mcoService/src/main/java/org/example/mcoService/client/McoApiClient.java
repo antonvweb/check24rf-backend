@@ -40,8 +40,8 @@ public class McoApiClient {
                 .transitionLink(transitionLink)
                 .text(description)
                 .image(base64Logo != null ? base64Logo : "")
-                .imageFullscreen("")
-                .inn(inn)
+                .imageFullScreen("")  // ← Пустая строка
+                .inn(inn)  // ← Просто строка!
                 .phone(phone)
                 .build();
 

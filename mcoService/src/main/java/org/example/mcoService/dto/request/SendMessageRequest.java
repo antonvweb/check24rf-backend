@@ -16,7 +16,9 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SendMessageRequest {
 
-    @XmlElement(name = "Message", required = true)
+    @XmlElement(name = "Message",
+            namespace = "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
+            required = true)
     private MessageWrapper message;
 
     @Data
@@ -27,6 +29,5 @@ public class SendMessageRequest {
 
         @XmlAnyElement(lax = true)
         private Object content;
-
     }
 }

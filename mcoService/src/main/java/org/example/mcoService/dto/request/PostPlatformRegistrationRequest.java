@@ -16,30 +16,39 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostPlatformRegistrationRequest {
 
-    @XmlElement(name = "Name", required = true)
+    @XmlElement(name = "Name", required = true,
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String name;
 
-    @XmlElement(name = "Type", required = true)
+    @XmlElement(name = "Type", required = true,
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String type;
 
-    @XmlElement(name = "Description")
+    @XmlElement(name = "Description",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String description;
 
-    @XmlElement(name = "TransitionLink")
+    @XmlElement(name = "TransitionLink",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String transitionLink;
 
-    @XmlElement(name = "Text")
+    @XmlElement(name = "Text",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String text;
 
-    @XmlElement(name = "Image")
+    @XmlElement(name = "Image",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String image;
 
-    @XmlElement(name = "ImageFullScreen")  // ← С большой буквы!
+    @XmlElement(name = "ImageFullScreen",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String imageFullScreen;
 
-    @XmlElement(name = "Inn")  // ← Единственное число, НЕ INNs!
+    @XmlElement(name = "Inn",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String inn;
 
-    @XmlElement(name = "Phone")
+    @XmlElement(name = "Phone",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String phone;
 }

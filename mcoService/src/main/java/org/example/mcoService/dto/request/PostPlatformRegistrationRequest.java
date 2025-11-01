@@ -14,7 +14,7 @@ import jakarta.xml.bind.annotation.*;
 @XmlRootElement(name = "PostPlatformRegistrationRequest",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
-// УБРАНА аннотация @XmlType(propOrder = ...)
+@XmlType(propOrder = {"name", "type", "description", "transitionLink", "text", "image", "imageFullScreen", "inn", "phone"})
 public class PostPlatformRegistrationRequest {
 
     @XmlElement(name = "Name", required = true)
@@ -35,10 +35,10 @@ public class PostPlatformRegistrationRequest {
     @XmlElement(name = "Image")
     private String image;
 
-    @XmlElement(name = "ImageFullScreen")
+    @XmlElement(name = "ImageFullScreen")  // ← С большой буквы!
     private String imageFullScreen;
 
-    @XmlElement(name = "Inn")
+    @XmlElement(name = "Inn")  // ← Единственное число, НЕ INNs!
     private String inn;
 
     @XmlElement(name = "Phone")

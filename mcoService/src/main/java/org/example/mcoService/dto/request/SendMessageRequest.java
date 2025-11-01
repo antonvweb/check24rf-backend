@@ -16,9 +16,7 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SendMessageRequest {
 
-    @XmlElement(name = "Message",
-            namespace = "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
-            required = true)
+    @XmlElement(name = "Message", required = true)  // ← УБРАН namespace!
     private MessageWrapper message;
 
     @Data

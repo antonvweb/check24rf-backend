@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.request.GetMessageRequest;
+import org.example.mcoService.dto.response.DrPlatformError;
 import org.example.mcoService.dto.response.GetMessageResponse;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Component;
@@ -99,10 +100,20 @@ public class McoSoapClient {
 
                 if (response instanceof GetMessageResponse getMessageResponse) {
                     if ("COMPLETED".equals(getMessageResponse.getProcessingStatus())) {
-                        // Извлекаем реальный ответ
                         if (getMessageResponse.getMessage() != null &&
                                 getMessageResponse.getMessage().getContent() != null) {
-                            return responseClass.cast(getMessageResponse.getMessage().getContent());
+
+                            Object content = getMessageResponse.getMessage().getContent();
+
+                            // Проверяем на ошибку
+                            if (content instanceof DrPlatformError error) {
+                                String errorMsg = String.format("Ошибка API МЧО: [%s] %s",
+                                        error.getCode(), error.getMessage());
+                                log.error(errorMsg);
+                                throw new RuntimeException(errorMsg);
+                            }
+
+                            return responseClass.cast(content);
                         }
                     } else if ("FAILED".equals(getMessageResponse.getProcessingStatus())) {
                         throw new RuntimeException("Обработка запроса завершилась с ошибкой");

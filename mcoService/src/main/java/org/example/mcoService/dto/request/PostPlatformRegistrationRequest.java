@@ -14,7 +14,6 @@ import jakarta.xml.bind.annotation.*;
 @XmlRootElement(name = "PostPlatformRegistrationRequest",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(propOrder = {"name", "type", "description", "transitionLink", "text", "image", "imageFullScreen", "inn", "phone"})
 public class PostPlatformRegistrationRequest {
 
     @XmlElement(name = "Name", required = true)

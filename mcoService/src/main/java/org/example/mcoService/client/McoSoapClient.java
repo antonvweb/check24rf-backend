@@ -25,7 +25,7 @@ public class McoSoapClient {
 
     private final WebServiceTemplate webServiceTemplate;
     private final McoProperties mcoProperties;
-    private final Jaxb2Marshaller marshaller;
+    private final Jaxb2Marshaller marshaller; // Добавлено
 
     public <T> T sendSoapRequest(Object request, Class<T> responseClass, String soapAction) {
         try {
@@ -63,24 +63,24 @@ public class McoSoapClient {
                         .messageId(messageId)
                         .build();
 
-                // Создаем SendMessageRequest вручную
+                // Создаем GetMessageRequest вручную
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                 factory.setNamespaceAware(true);
                 DocumentBuilder builder = factory.newDocumentBuilder();
                 Document doc = builder.newDocument();
 
-                Element sendMessageRequest = doc.createElementNS(
+                Element getMessageRequest = doc.createElementNS(
                         "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
                         "GetMessageRequest"
                 );
-                doc.appendChild(sendMessageRequest);
+                doc.appendChild(getMessageRequest);
 
                 Element messageIdElement = doc.createElementNS(
                         "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
                         "MessageId"
                 );
                 messageIdElement.setTextContent(messageId);
-                sendMessageRequest.appendChild(messageIdElement);
+                getMessageRequest.appendChild(messageIdElement);
 
                 // Отправляем
                 Object response = webServiceTemplate.sendSourceAndReceive(
@@ -94,9 +94,7 @@ public class McoSoapClient {
                                 }
                             }
                         },
-                        source -> {
-                            return marshaller.unmarshal(source);
-                        }
+                        source -> marshaller.unmarshal(source)
                 );
 
                 if (response instanceof GetMessageResponse getMessageResponse) {

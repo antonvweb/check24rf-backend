@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
-import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -53,9 +53,15 @@ public class McoService {
         }
     }
 
-    public void connectUser(String phone) {
-        PostBindPartnerResponse response = apiClient.bindUser(phone);
-        log.info("Заявка на подключение пользователя {} отправлена, MessageId: {}", phone, response.getMessageId());
+    public String connectUser(String phone) {
+        String requestId = UUID.randomUUID().toString(); // Генерируем уникальный ID
+
+        SendMessageResponse response = apiClient.bindUser(phone, requestId);
+
+        log.info("Заявка на подключение пользователя {} отправлена, MessageId: {}, RequestId: {}",
+                phone, response.getMessageId(), requestId);
+
+        return response.getMessageId();
     }
 
     public void syncReceipts() {

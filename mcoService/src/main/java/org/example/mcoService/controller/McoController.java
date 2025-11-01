@@ -37,14 +37,13 @@ public class McoController {
     @PostMapping("/bind-user-test")
     public ResponseEntity<String> bindUserTest() {
         String phone = "79054459061"; // Ваш номер
-        String requestId = UUID.randomUUID().toString();
 
-        SendMessageResponse response = mcoApiClient.bindUser(phone, requestId);
+        String messageId = mcoService.connectUser(phone);
 
         return ResponseEntity.ok(
-                "Заявка на подключение отправлена. MessageId: " + response.getMessageId() +
-                        "\nRequestId: " + requestId +
-                        "\nТеперь нужно одобрить заявку в ЛК МЧО: https://dr.stm-labs.ru/partners"
+                "Заявка на подключение отправлена. MessageId: " + messageId +
+                        "\n\nТеперь нужно одобрить заявку в ЛК МЧО:" +
+                        "\nhttps://dr.stm-labs.ru/partners\n"
         );
     }
 

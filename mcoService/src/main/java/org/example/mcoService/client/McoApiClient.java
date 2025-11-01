@@ -5,9 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.request.GetReceiptsTapeRequest;
 import org.example.mcoService.dto.request.PostBindPartnerRequest;
 import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
+import org.example.mcoService.dto.request.SendMessageRequest;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.dto.response.PostBindPartnerResponse;
-import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
+import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,35 +24,42 @@ public class McoApiClient {
     @Autowired
     private McoSoapClient soapClient;
 
-    public PostPlatformRegistrationResponse registerPartner(
+    public SendMessageResponse registerPartner(
             String name,
             String description,
             String transitionLink,
-            String base64Logo, // Изменено на String
+            String base64Logo,
             String inn,
             String phone) {
 
         log.info("Регистрация партнера: {}", name);
 
-        PostPlatformRegistrationRequest request = PostPlatformRegistrationRequest.builder()
+        PostPlatformRegistrationRequest innerRequest = PostPlatformRegistrationRequest.builder()
                 .name(name)
                 .type("PARTNER")
                 .description(description)
                 .transitionLink(transitionLink)
-                .image(base64Logo != null ? base64Logo : "") // Передаём строку Base64
-                .inns(Collections.singletonList(inn))
+                .text(description)
+                .image(base64Logo != null ? base64Logo : "")
+                .imageFullscreen("")
+                .inn(inn)
                 .phone(phone)
-                .hidden(false)
                 .build();
 
-        return soapClient.sendSoapRequest(
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        SendMessageResponse response = soapClient.sendSoapRequest(
                 request,
-                PostPlatformRegistrationResponse.class, // Исправлено на правильный класс
-                "PostPlatformRegistration"
+                SendMessageResponse.class,
+                "SendMessageRequest"
         );
+
+        log.info("Партнер зарегистрирован, MessageId: {}", response.getMessageId());
+        return response;
     }
 
-    // Остальные методы без изменений
     public PostBindPartnerResponse bindUser(String phoneNumber) {
         log.info("Подключение пользователя: {}", phoneNumber);
 

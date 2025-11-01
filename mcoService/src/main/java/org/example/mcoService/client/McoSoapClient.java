@@ -6,9 +6,6 @@ import org.example.mcoService.config.McoProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.soap.SoapMessage;
-import org.springframework.ws.transport.context.TransportContext;
-import org.springframework.ws.transport.context.TransportContextHolder;
-import org.springframework.ws.transport.http.HttpComponents5Connection;
 
 @Slf4j
 @Component
@@ -18,18 +15,17 @@ public class McoSoapClient {
     private final WebServiceTemplate webServiceTemplate;
     private final McoProperties mcoProperties;
 
-    /**
-     * Универсальный метод для отправки SOAP запросов
-     */
     public <T> T sendSoapRequest(Object request, Class<T> responseClass, String soapAction) {
         try {
             log.debug("Отправка SOAP запроса: {}", request.getClass().getSimpleName());
+
             Object response = webServiceTemplate.marshalSendAndReceive(
                     mcoProperties.getApi().getBaseUrl(),
                     request,
                     message -> {
                         if (message instanceof SoapMessage soapMessage) {
-                            soapMessage.setSoapAction(soapAction);
+                            soapMessage.setSoapAction("urn:" + soapAction);
+                            log.debug("SOAPAction установлен: urn:{}", soapAction);
                         }
                     }
             );

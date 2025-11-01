@@ -64,6 +64,7 @@ mco:
     # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
     # Заменить на реальный токен из письма от ФНС
     token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
+    user-token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
 
     # Таймаут для SOAP запросов (в миллисекундах)
     timeout: 60000  # Увеличено до 60 секунд для медленных запросов

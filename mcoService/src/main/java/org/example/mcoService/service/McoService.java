@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.response.PostBindPartnerResponse;
-import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
+import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -27,24 +27,25 @@ public class McoService {
             if (logoBytes.length > 100 * 1024) {
                 throw new IllegalArgumentException("Размер логотипа превышает 100 КБ");
             }
-            // Проверка формата (простой способ)
+
             String mimeType = Files.probeContentType(Path.of(logoPath));
             if (!"image/jpeg".equals(mimeType)) {
                 throw new IllegalArgumentException("Логотип должен быть в формате JPEG");
             }
+
             String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
 
-            PostPlatformRegistrationResponse response = apiClient.registerPartner(
+            SendMessageResponse response = apiClient.registerPartner(
                     properties.getPartner().getName(),
-                    "Описание",
-                    "https://чек24.рф/",
+                    "Описание вашего сервиса кешбэка",
+                    "https://xn--24-mlcu7d.xn--p1ai/",
                     base64Logo,
                     properties.getPartner().getInn(),
                     "79991234567"
             );
 
-            log.info("Партнер зарегистрирован с ID: {}", response.getId());
-            return response.getId();
+            log.info("Партнер зарегистрирован, MessageId: {}", response.getMessageId());
+            return response.getMessageId();
 
         } catch (IOException e) {
             log.error("Ошибка чтения логотипа", e);
@@ -52,10 +53,9 @@ public class McoService {
         }
     }
 
-    public PostBindPartnerResponse connectUser(String phone) {
+    public void connectUser(String phone) {
         PostBindPartnerResponse response = apiClient.bindUser(phone);
         log.info("Заявка на подключение пользователя {} отправлена, MessageId: {}", phone, response.getMessageId());
-        return response;
     }
 
     public void syncReceipts() {

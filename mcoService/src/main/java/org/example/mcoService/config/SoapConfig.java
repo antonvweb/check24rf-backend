@@ -21,10 +21,12 @@ import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.client.support.interceptor.ClientInterceptor;
 import org.springframework.ws.context.MessageContext;
 import org.springframework.ws.soap.SoapMessage;
+import org.springframework.ws.transport.context.TransportContext;
+import org.springframework.ws.transport.context.TransportContextHolder;
+import org.springframework.ws.transport.http.HttpComponents5Connection;
 import org.springframework.ws.transport.http.HttpComponents5MessageSender;
 
 import javax.net.ssl.SSLContext;
-import javax.xml.namespace.QName;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -113,17 +115,15 @@ public class SoapConfig {
             public boolean handleRequest(MessageContext messageContext) {
                 if (messageContext.getRequest() instanceof SoapMessage soapMessage) {
                     try {
-                        String soapAction = soapMessage.getSoapAction();
-                        String namespace = soapAction != null && soapAction.contains("SmzIntegrationService") ?
-                                "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1" :
-                                "urn://x-artefacts-gnivc-ru/ais3/kkt/DrPartnersIntegrationService/v0.1";
-
-                        soapMessage.getSoapHeader()
-                                .addHeaderElement(new QName(namespace, "FNS-OpenApi-Token"))
-                                .setText(mcoProperties.getApi().getToken());
-                        log.debug("Токен добавлен в SOAP заголовок с namespace: {}", namespace);
+                        // Добавляем оба токена в HTTP заголовки
+                        TransportContext context = TransportContextHolder.getTransportContext();
+                        if (context.getConnection() instanceof HttpComponents5Connection connection) {
+                            connection.addRequestHeader("FNS-OpenApi-Token", mcoProperties.getApi().getToken());
+                            connection.addRequestHeader("FNS-OpenApi-UserToken", mcoProperties.getApi().getUserToken());
+                            log.debug("Токены добавлены в HTTP заголовки");
+                        }
                     } catch (Exception e) {
-                        log.error("Ошибка добавления токена в SOAP-заголовок", e);
+                        log.error("Ошибка добавления токенов", e);
                         return false;
                     }
                 }

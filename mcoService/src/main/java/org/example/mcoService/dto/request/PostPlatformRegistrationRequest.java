@@ -6,15 +6,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.xml.bind.annotation.*;
-import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @XmlRootElement(name = "PostPlatformRegistrationRequest",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(propOrder = {"name", "type", "description", "transitionLink", "text", "image", "imageFullscreen", "inn", "phone"})
 public class PostPlatformRegistrationRequest {
 
     @XmlElement(name = "Name", required = true)
@@ -32,19 +32,15 @@ public class PostPlatformRegistrationRequest {
     @XmlElement(name = "Text")
     private String text;
 
-    @XmlElement(name = "Image", required = true)
-    private String image; // Изменено на String для Base64
+    @XmlElement(name = "Image")
+    private String image;
 
-    @XmlElementWrapper(name = "INNs")
-    @XmlElement(name = "INN")
-    private List<String> inns;
+    @XmlElement(name = "ImageFullScreen")
+    private String imageFullscreen;
+
+    @XmlElement(name = "Inn")
+    private String inn;
 
     @XmlElement(name = "Phone")
     private String phone;
-
-    @XmlElement(name = "ImageFullscreen")
-    private String imageFullscreen; // Также Base64
-
-    @XmlElement(name = "Hidden")
-    private Boolean hidden;
 }

@@ -9,6 +9,7 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SendMessageResponse {
 
-    @XmlElement(name = "MessageId")
+    @XmlElement(name = "MessageId",
+            namespace = "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0")  // Добавлен namespace
     private String messageId;
 }

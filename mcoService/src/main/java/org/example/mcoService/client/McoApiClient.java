@@ -7,14 +7,13 @@ import org.example.mcoService.dto.request.PostBindPartnerRequest;
 import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
 import org.example.mcoService.dto.request.SendMessageRequest;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
-import org.example.mcoService.dto.response.PostBindPartnerResponse;
+import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -60,12 +59,44 @@ public class McoApiClient {
         return response;
     }
 
-    public PostBindPartnerResponse bindUser(String phoneNumber) {
+    public PostPlatformRegistrationResponse registerPartnerSync(
+            String name,
+            String description,
+            String transitionLink,
+            String base64Logo,
+            String inn,
+            String phone) {
+
+        log.info("Регистрация партнера: {}", name);
+
+        // Отправляем запрос
+        SendMessageResponse messageResponse = registerPartner(
+                name, description, transitionLink, base64Logo, inn, phone
+        );
+
+        log.info("Получен MessageId: {}, ожидаем результата...", messageResponse.getMessageId());
+
+        try {
+            // Опрашиваем результат
+            PostPlatformRegistrationResponse response =
+                    soapClient.getAsyncResult(
+                            messageResponse.getMessageId(),
+                            PostPlatformRegistrationResponse.class
+                    );
+
+            log.info("Партнер зарегистрирован, ID: {}", response.getId());
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
+
+    public SendMessageResponse bindUser(String phoneNumber, String requestId) {
         log.info("Подключение пользователя: {}", phoneNumber);
 
-        String requestId = UUID.randomUUID().toString();
-
-        PostBindPartnerRequest request = PostBindPartnerRequest.builder()
+        PostBindPartnerRequest innerRequest = PostBindPartnerRequest.builder()
                 .requestId(requestId)
                 .userIdentifier(phoneNumber)
                 .permissionGroups(Collections.singletonList("DEFAULT"))
@@ -74,14 +105,15 @@ public class McoApiClient {
                 .requireNoActiveRequests(false)
                 .build();
 
-        PostBindPartnerResponse response = soapClient.sendSoapRequest(
-                request,
-                PostBindPartnerResponse.class,
-                "PostBindPartnerRequest"
-        );
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
 
-        log.info("Заявка отправлена, MessageId: {}", response.getMessageId());
-        return response;
+        return soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
     }
 
     public GetReceiptsTapeResponse getReceipts(String marker) {

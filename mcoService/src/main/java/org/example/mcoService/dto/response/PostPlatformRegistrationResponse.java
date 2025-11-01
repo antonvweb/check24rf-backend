@@ -5,8 +5,8 @@ import jakarta.xml.bind.annotation.*;
 import java.time.LocalDateTime;
 
 @Data
-@XmlRootElement(name = "PostPlatformRegistrationRequest",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
+@XmlRootElement(name = "PostPlatformRegistrationResponse",
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostPlatformRegistrationResponse {
 
@@ -15,8 +15,4 @@ public class PostPlatformRegistrationResponse {
 
     @XmlElement(name = "RegistrationDate")
     private LocalDateTime registrationDate;
-
-    public String getId() {
-        return id;
-    }
 }

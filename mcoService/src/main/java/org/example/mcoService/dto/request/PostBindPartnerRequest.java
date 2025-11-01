@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import jakarta.xml.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,8 +12,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "PostPlatformRegistrationRequest",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
+@XmlRootElement(name = "PostBindPartnerRequest",
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerRequest {
 
@@ -22,11 +21,11 @@ public class PostBindPartnerRequest {
     private String requestId;
 
     @XmlElement(name = "UserIdentifier", required = true)
-    private String userIdentifier; // Номер телефона в формате 79998887766
+    private String userIdentifier;
 
     @XmlElementWrapper(name = "PermissionGroups")
     @XmlElement(name = "PermissionGroup")
-    private List<String> permissionGroups; // DEFAULT
+    private List<String> permissionGroups;
 
     @XmlElement(name = "ExpiredAt")
     private LocalDateTime expiredAt;

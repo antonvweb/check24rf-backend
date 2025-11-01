@@ -3,9 +3,20 @@ package org.example.mcoService.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.request.GetMessageRequest;
+import org.example.mcoService.dto.response.GetMessageResponse;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.stereotype.Component;
+import org.springframework.ws.WebServiceMessage;
+import org.springframework.ws.client.core.WebServiceMessageCallback;
 import org.springframework.ws.client.core.WebServiceTemplate;
 import org.springframework.ws.soap.SoapMessage;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.dom.DOMSource;
 
 @Slf4j
 @Component
@@ -14,6 +25,7 @@ public class McoSoapClient {
 
     private final WebServiceTemplate webServiceTemplate;
     private final McoProperties mcoProperties;
+    private final Jaxb2Marshaller marshaller;
 
     public <T> T sendSoapRequest(Object request, Class<T> responseClass, String soapAction) {
         try {
@@ -37,5 +49,78 @@ public class McoSoapClient {
             log.error("Ошибка при отправке SOAP запроса", e);
             throw new RuntimeException("Ошибка взаимодействия с API МЧО", e);
         }
+    }
+
+    public <T> T getAsyncResult(String messageId, Class<T> responseClass) throws InterruptedException {
+        int maxAttempts = 10;
+        int attempt = 0;
+
+        while (attempt < maxAttempts) {
+            try {
+                log.debug("Опрос результата по MessageId: {}, попытка {}", messageId, attempt + 1);
+
+                GetMessageRequest request = GetMessageRequest.builder()
+                        .messageId(messageId)
+                        .build();
+
+                // Создаем SendMessageRequest вручную
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                factory.setNamespaceAware(true);
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                Document doc = builder.newDocument();
+
+                Element sendMessageRequest = doc.createElementNS(
+                        "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
+                        "GetMessageRequest"
+                );
+                doc.appendChild(sendMessageRequest);
+
+                Element messageIdElement = doc.createElementNS(
+                        "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0",
+                        "MessageId"
+                );
+                messageIdElement.setTextContent(messageId);
+                sendMessageRequest.appendChild(messageIdElement);
+
+                // Отправляем
+                Object response = webServiceTemplate.sendSourceAndReceive(
+                        mcoProperties.getApi().getBaseUrl(),
+                        new DOMSource(doc),
+                        new WebServiceMessageCallback() {
+                            @Override
+                            public void doWithMessage(WebServiceMessage message) {
+                                if (message instanceof SoapMessage soapMessage) {
+                                    soapMessage.setSoapAction("urn:GetMessageRequest");
+                                }
+                            }
+                        },
+                        source -> {
+                            return marshaller.unmarshal(source);
+                        }
+                );
+
+                if (response instanceof GetMessageResponse getMessageResponse) {
+                    if ("COMPLETED".equals(getMessageResponse.getProcessingStatus())) {
+                        // Извлекаем реальный ответ
+                        if (getMessageResponse.getMessage() != null &&
+                                getMessageResponse.getMessage().getContent() != null) {
+                            return responseClass.cast(getMessageResponse.getMessage().getContent());
+                        }
+                    } else if ("FAILED".equals(getMessageResponse.getProcessingStatus())) {
+                        throw new RuntimeException("Обработка запроса завершилась с ошибкой");
+                    }
+                }
+
+                // Ждем 2 секунды перед следующей попыткой
+                Thread.sleep(2000);
+                attempt++;
+
+            } catch (Exception e) {
+                log.error("Ошибка при опросе результата", e);
+                throw new RuntimeException("Ошибка получения результата", e);
+            }
+        }
+
+        throw new RuntimeException("Превышено время ожидания результата");
     }
 }

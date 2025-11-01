@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +36,8 @@ public class McoService {
 
             String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
 
-            SendMessageResponse response = apiClient.registerPartner(
+            // ИСПОЛЬЗУЕМ СИНХРОННЫЙ МЕТОД - ОН ДОЖДЕТСЯ РЕЗУЛЬТАТА
+            PostPlatformRegistrationResponse response = apiClient.registerPartnerSync(
                     properties.getPartner().getName(),
                     "Описание вашего сервиса кешбэка",
                     "https://xn--24-mlcu7d.xn--p1ai/",
@@ -44,8 +46,8 @@ public class McoService {
                     "79991234567"
             );
 
-            log.info("Партнер зарегистрирован, MessageId: {}", response.getMessageId());
-            return response.getMessageId();
+            log.info("Партнер РЕАЛЬНО зарегистрирован, ID: {}", response.getId());
+            return response.getId(); // Возвращаем РЕАЛЬНЫЙ ID
 
         } catch (IOException e) {
             log.error("Ошибка чтения логотипа", e);
@@ -54,7 +56,7 @@ public class McoService {
     }
 
     public String connectUser(String phone) {
-        String requestId = UUID.randomUUID().toString(); // Генерируем уникальный ID
+        String requestId = UUID.randomUUID().toString();
 
         SendMessageResponse response = apiClient.bindUser(phone, requestId);
 

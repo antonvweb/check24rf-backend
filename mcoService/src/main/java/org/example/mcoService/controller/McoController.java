@@ -2,14 +2,11 @@ package org.example.mcoService.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.mcoService.client.McoApiClient;
-import org.example.mcoService.dto.response.SendMessageResponse;
 import org.example.mcoService.service.McoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -19,13 +16,12 @@ public class McoController {
 
     @Autowired
     private McoService mcoService;
-    @Autowired
-    private McoApiClient mcoApiClient;
 
     @PostMapping("/register")
     public ResponseEntity<String> registerPartner(@RequestParam String logoPath) {
-        String messageId = mcoService.initializePartner(logoPath);
-        return ResponseEntity.ok("Партнер зарегистрирован, MessageId: " + messageId);
+        String partnerId = mcoService.initializePartner(logoPath);
+        return ResponseEntity.ok("Партнер зарегистрирован с ID: " + partnerId +
+                "\n\nПроверьте: https://dr.stm-labs.ru/partners");
     }
 
     @PostMapping("/bind-user")

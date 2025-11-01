@@ -30,6 +30,8 @@ import javax.net.ssl.SSLContext;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Configuration
@@ -37,6 +39,7 @@ import java.nio.file.Paths;
 public class SoapConfig {
 
     private final McoProperties mcoProperties;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss-SSS");
 
     @Bean
     public Jaxb2Marshaller marshaller() {
@@ -55,10 +58,13 @@ public class SoapConfig {
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
                     String request = out.toString("UTF-8");
-                    log.info("=== SOAP REQUEST ===\n{}", request);
 
-                    // Сохраните в файл
-                    Files.write(Paths.get("soap-request.xml"), request.getBytes());
+                    String timestamp = LocalDateTime.now().format(FORMATTER);
+                    String filename = "soap-request-" + timestamp + ".xml";
+
+                    log.info("=== SOAP REQUEST ===\n{}", request);
+                    Files.write(Paths.get(filename), request.getBytes());
+                    log.info("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging request", e);
                 }
@@ -72,10 +78,13 @@ public class SoapConfig {
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
                     String response = out.toString("UTF-8");
-                    log.info("=== SOAP RESPONSE ===\n{}", response);
 
-                    // Сохраните в файл
-                    Files.write(Paths.get("soap-response.xml"), response.getBytes());
+                    String timestamp = LocalDateTime.now().format(FORMATTER);
+                    String filename = "soap-response-" + timestamp + ".xml";
+
+                    log.info("=== SOAP RESPONSE ===\n{}", response);
+                    Files.write(Paths.get(filename), response.getBytes());
+                    log.info("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging response", e);
                 }
@@ -89,10 +98,13 @@ public class SoapConfig {
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
                     String fault = out.toString("UTF-8");
-                    log.error("=== SOAP FAULT ===\n{}", fault);
 
-                    // Сохраните в файл
-                    Files.write(Paths.get("soap-fault.xml"), fault.getBytes());
+                    String timestamp = LocalDateTime.now().format(FORMATTER);
+                    String filename = "soap-fault-" + timestamp + ".xml";
+
+                    log.error("=== SOAP FAULT ===\n{}", fault);
+                    Files.write(Paths.get(filename), fault.getBytes());
+                    log.error("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging fault", e);
                 }
@@ -115,7 +127,6 @@ public class SoapConfig {
             public boolean handleRequest(MessageContext messageContext) {
                 if (messageContext.getRequest() instanceof SoapMessage soapMessage) {
                     try {
-                        // Добавляем оба токена в HTTP заголовки
                         TransportContext context = TransportContextHolder.getTransportContext();
                         if (context.getConnection() instanceof HttpComponents5Connection connection) {
                             connection.addRequestHeader("FNS-OpenApi-Token", mcoProperties.getApi().getToken());
@@ -156,7 +167,7 @@ public class SoapConfig {
         template.setUnmarshaller(marshaller);
         template.setMessageSender(messageSender);
         template.setInterceptors(new ClientInterceptor[]{
-                loggingInterceptor,  // Добавьте первым для логирования до токена
+                loggingInterceptor,
                 tokenInterceptor
         });
         return template;
@@ -166,7 +177,7 @@ public class SoapConfig {
     public HttpClient httpClient() {
         try {
             SSLContext sslContext = SSLContextBuilder.create()
-                    .loadTrustMaterial((chain, authType) -> true) // Доверяем всем сертификатам (только для DEV)
+                    .loadTrustMaterial((chain, authType) -> true)
                     .build();
 
             SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
@@ -195,7 +206,6 @@ public class SoapConfig {
 
             return HttpClients.custom()
                     .setConnectionManager(connectionManager)
-                    // .disableContentCompression() // Уберите эту строку для теста
                     .disableAutomaticRetries()
                     .addRequestInterceptorFirst((request, entity, context) -> {
                         request.removeHeaders("Content-Length");

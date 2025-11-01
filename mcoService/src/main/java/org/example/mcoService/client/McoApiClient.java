@@ -31,7 +31,13 @@ public class McoApiClient {
             String inn,
             String phone) {
 
-        log.info("Регистрация партнера: {}", name);
+        log.info("=== НАЧАЛО РЕГИСТРАЦИИ ===");
+        log.info("name: [{}]", name);
+        log.info("name length: {}", name != null ? name.length() : "null");
+        log.info("name bytes: {}", name != null ? java.util.Arrays.toString(name.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : "null");
+        log.info("type: PARTNER");
+        log.info("inn: {}", inn);
+        log.info("phone: {}", phone);
 
         PostPlatformRegistrationRequest innerRequest = PostPlatformRegistrationRequest.builder()
                 .name(name)
@@ -40,10 +46,13 @@ public class McoApiClient {
                 .transitionLink(transitionLink)
                 .text(description)
                 .image(base64Logo != null ? base64Logo : "")
-                .imageFullScreen("")  // ← Пустая строка
-                .inn(inn)  // ← Просто строка!
+                .imageFullScreen("")
+                .inn(inn)
                 .phone(phone)
                 .build();
+
+        log.info("=== СОЗДАН ОБЪЕКТ ===");
+        log.info("innerRequest.name: [{}]", innerRequest.getName());
 
         SendMessageRequest request = SendMessageRequest.builder()
                 .message(new SendMessageRequest.MessageWrapper(innerRequest))

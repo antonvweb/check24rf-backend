@@ -1,10 +1,7 @@
 package org.example.mcoService.dto.response;
 
-import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import lombok.Data;
 import jakarta.xml.bind.annotation.*;
-import org.example.mcoService.dto.LocalDateTimeAdapter;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,7 +9,6 @@ import java.util.List;
 @XmlRootElement(name = "GetReceiptsTapeResponse",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlJavaTypeAdapter(LocalDateTimeAdapter.class)
 public class GetReceiptsTapeResponse {
 
     @XmlElement(name = "NextMarker")

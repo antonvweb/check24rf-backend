@@ -2,8 +2,13 @@ package org.example.mcoService.client;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.mcoService.dto.request.*;
-import org.example.mcoService.dto.response.*;
+import org.example.mcoService.dto.request.GetReceiptsTapeRequest;
+import org.example.mcoService.dto.request.PostBindPartnerRequest;
+import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
+import org.example.mcoService.dto.request.SendMessageRequest;
+import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
+import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -154,62 +159,6 @@ public class McoApiClient {
             marker = response.getNextMarker();
             hasMore = response.getTotalExpectedRemainingPolls() != null &&
                     response.getTotalExpectedRemainingPolls() > 1;
-        }
-    }
-
-    public PostBindPartnerResponse getBindUserResult(String messageId) {
-        log.info("Получение результата заявки по MessageId: {}", messageId);
-
-        try {
-            // Используем существующий метод getAsyncResult
-            PostBindPartnerResponse response = soapClient.getAsyncResult(
-                    messageId,
-                    PostBindPartnerResponse.class
-            );
-
-            if (response != null) {
-                log.info("✅ Заявка обработана! RequestId: {}", response.getRequestId());
-                return response;
-            } else {
-                log.info("⏳ Заявка еще обрабатывается");
-                return null;
-            }
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Прервано ожидание результата", e);
-            return null;
-        } catch (Exception e) {
-            log.error("Ошибка получения результата заявки", e);
-            return null;
-        }
-    }
-
-    public GetBindPartnerStatusResponse getBindingStatus(String requestId) {
-        log.info("Проверка статуса заявки по RequestId: {}", requestId);
-
-        GetBindPartnerStatusRequest innerRequest = GetBindPartnerStatusRequest.builder()
-                .requestIds(Collections.singletonList(requestId))
-                .build();
-
-        SendMessageRequest request = SendMessageRequest.builder()
-                .message(new SendMessageRequest.MessageWrapper(innerRequest))
-                .build();
-
-        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
-                request,
-                SendMessageResponse.class,
-                "SendMessageRequest"
-        );
-
-        try {
-            return soapClient.getAsyncResult(
-                    messageResponse.getMessageId(),
-                    GetBindPartnerStatusResponse.class
-            );
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Прервано ожидание результата", e);
         }
     }
 }

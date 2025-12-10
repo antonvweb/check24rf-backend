@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
-import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
-import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.stereotype.Service;
@@ -72,49 +70,5 @@ public class McoService {
         log.info("Начало синхронизации чеков");
         apiClient.getAllReceipts();
         log.info("Синхронизация чеков завершена");
-    }
-
-    public String checkBindingResult(String messageId) {
-        PostBindPartnerResponse response = apiClient.getBindUserResult(messageId);
-
-        if (response != null) {
-            log.info("✅ Заявка обработана! RequestId: {}", response.getRequestId());
-            return "Заявка обработана. Теперь пользователь должен одобрить в ЛК";
-        } else {
-            return "Заявка еще в обработке, повторите запрос через несколько секунд";
-        }
-    }
-
-    public String checkBindingStatus(String requestId) {
-        try {
-            GetBindPartnerStatusResponse response = apiClient.getBindingStatus(requestId);
-
-            if (response != null && response.getStatuses() != null && !response.getStatuses().isEmpty()) {
-                var status = response.getStatuses().get(0);
-
-                log.info("Статус заявки {}: {}", requestId, status.getResult());
-
-                return switch (status.getResult()) {
-                    case "REQUEST_APPROVED" ->
-                            "✅ Пользователь одобрил заявку! Права выданы: " + status.getPermissionGroups();
-                    case "REQUEST_DECLINED" ->
-                            "❌ Пользователь отклонил заявку";
-                    case "REQUEST_CANCELLED_AS_DUPLICATE" ->
-                            "⚠️ Заявка отменена из-за создания новой";
-                    case "IN_PROGRESS" ->
-                            "⏳ Заявка на рассмотрении у пользователя";
-                    case "REQUEST_EXPIRED" ->
-                            "⌛ Срок заявки истек";
-                    default ->
-                            "❓ Неизвестный статус: " + status.getResult();
-                };
-            }
-
-            return "Статус не найден";
-
-        } catch (Exception e) {
-            log.error("Ошибка проверки статуса", e);
-            return "Ошибка проверки: " + e.getMessage();
-        }
     }
 }

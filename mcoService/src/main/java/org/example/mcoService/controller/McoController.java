@@ -48,32 +48,4 @@ public class McoController {
         mcoService.syncReceipts();
         return ResponseEntity.ok("Синхронизация запущена");
     }
-
-    @GetMapping("/check-binding-result")
-    public ResponseEntity<String> checkBindingResult(@RequestParam String messageId) {
-        String result = mcoService.checkBindingResult(messageId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/check-binding-status")
-    public ResponseEntity<String> checkBindingStatus(@RequestParam String requestId) {
-        String result = mcoService.checkBindingStatus(requestId);
-        return ResponseEntity.ok(result);
-    }
-
-    // Комбинированная проверка
-    @GetMapping("/full-check")
-    public ResponseEntity<String> fullCheck(
-            @RequestParam String messageId,
-            @RequestParam String requestId
-    ) {
-        StringBuilder result = new StringBuilder();
-
-        result.append("=== ПРОВЕРКА ПО MESSAGE ID ===\n");
-        result.append(mcoService.checkBindingResult(messageId));
-        result.append("\n\n=== ПРОВЕРКА ПО REQUEST ID ===\n");
-        result.append(mcoService.checkBindingStatus(requestId));
-
-        return ResponseEntity.ok(result.toString());
-    }
 }

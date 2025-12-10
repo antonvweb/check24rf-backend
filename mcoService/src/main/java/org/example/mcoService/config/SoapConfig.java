@@ -14,7 +14,6 @@ import org.apache.hc.core5.http.config.Registry;
 import org.apache.hc.core5.http.config.RegistryBuilder;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
-import org.example.mcoService.dto.LocalDateTimeAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
@@ -46,7 +45,6 @@ public class SoapConfig {
     public Jaxb2Marshaller marshaller() {
         Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
         marshaller.setPackagesToScan("org.example.mcoService.dto");
-        marshaller.setAdapters(new LocalDateTimeAdapter());  // Добавьте адаптер здесь
         return marshaller;
     }
 

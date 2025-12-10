@@ -1,17 +1,13 @@
 package org.example.mcoService.dto.response;
 
-import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import lombok.Data;
 import jakarta.xml.bind.annotation.*;
-import org.example.mcoService.dto.LocalDateTimeAdapter;
-
 import java.time.LocalDateTime;
 
 @Data
 @XmlRootElement(name = "PostBindPartnerResponse",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlJavaTypeAdapter(LocalDateTimeAdapter.class)
 public class PostBindPartnerResponse {
 
     @XmlElement(name = "RequestId", required = true)

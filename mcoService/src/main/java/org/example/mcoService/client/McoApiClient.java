@@ -108,7 +108,7 @@ public class McoApiClient {
 
         PostBindPartnerRequest innerRequest = PostBindPartnerRequest.builder()
                 .requestId(requestId)
-                .userIdentifier(phoneNumber)
+                .UserIdentifier(phoneNumber)
                 .permissionGroups(Collections.singletonList("DEFAULT"))
                 .expiredAt(LocalDateTime.now().plusDays(7))
                 .isUnverifiedIdentifier(false)

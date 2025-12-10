@@ -32,7 +32,7 @@ public class McoController {
 
     @PostMapping("/bind-user-test")
     public ResponseEntity<String> bindUserTest() {
-        String phone = "79054459061";
+        String phone = "79054455906";
 
         String messageId = mcoService.connectUser(phone);
 

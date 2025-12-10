@@ -115,15 +115,15 @@ public class McoApiClient {
                 .requireNoActiveRequests(false)
                 .build();
 
+        // ←←← ВОТ СЮДА ТОЖЕ!
+        log.info(">>> ОТПРАВЛЯЕМ PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
+                innerRequest.getRequestId(), innerRequest.getUserIdentifier());
+
         SendMessageRequest request = SendMessageRequest.builder()
                 .message(new SendMessageRequest.MessageWrapper(innerRequest))
                 .build();
 
-        return soapClient.sendSoapRequest(
-                request,
-                SendMessageResponse.class,
-                "SendMessageRequest"
-        );
+        return soapClient.sendSoapRequest(request, SendMessageResponse.class, "SendMessageRequest");
     }
 
     public GetReceiptsTapeResponse getReceipts(String marker) {
@@ -166,27 +166,30 @@ public class McoApiClient {
     public PostBindPartnerResponse bindUserSync(String phoneNumber, String requestId) {
         log.info("Синхронное подключение пользователя: {}", phoneNumber);
 
+        // ←←← ВОТ СЮДА, ДО ОТПРАВКИ!
+        log.info(">>> Формируем PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
+                requestId, phoneNumber);
+
         // Отправляем запрос
         SendMessageResponse messageResponse = bindUser(phoneNumber, requestId);
 
-        log.info("Получен MessageId: {}, ожидаем результата...", messageResponse.getMessageId());
+        log.info("Получен MessageId: {}, начинаем опрос результата...", messageResponse.getMessageId());
 
         try {
-            // Опрашиваем результат (используем существующий getAsyncResult из McoSoapClient)
             PostBindPartnerResponse response = soapClient.getAsyncResult(
                     messageResponse.getMessageId(),
-                    PostBindPartnerResponse.class  // Укажите правильный класс ответа из DTO
+                    PostBindPartnerResponse.class
             );
 
-            log.info("Заявка обработана успешно: {}", response);  // Здесь логируйте детали ответа
+            log.info("Заявка успешно обработана! Ответ: {}", response);
             return response;
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Прервано ожидание результата", e);
         } catch (RuntimeException e) {
-            log.error("Ошибка обработки заявки: {}", e.getMessage());
-            throw e;  // Здесь поймаете DrPlatformError
+            log.error("Ошибка обработки заявки на стороне ФНС: {}", e.getMessage());
+            throw e;
         }
     }
 }

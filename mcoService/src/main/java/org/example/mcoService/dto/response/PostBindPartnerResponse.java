@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerResponse {
 
-    @XmlElement(name = "RequestId", required = true)
+    @XmlElement(name = "requestId", required = true)
     private String requestId;  // Эхо из запроса, для идентификации заявки
 
     @XmlElement(name = "MessageId", required = true)

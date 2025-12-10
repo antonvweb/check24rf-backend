@@ -18,21 +18,21 @@ import java.util.List;
 public class PostBindPartnerRequest {
 
     @XmlElement(name = "RequestId", required = true)
-    private String requestId;
+    private String RequestId;
 
     @XmlElement(name = "UserIdentifier", required = true)
     private String UserIdentifier;
 
     @XmlElementWrapper(name = "PermissionGroups")
     @XmlElement(name = "PermissionGroup")
-    private List<String> permissionGroups;
+    private List<String> PermissionGroups;
 
     @XmlElement(name = "ExpiredAt")
-    private LocalDateTime expiredAt;
+    private LocalDateTime ExpiredAt;
 
     @XmlElement(name = "IsUnverifiedIdentifier")
-    private Boolean isUnverifiedIdentifier;
+    private Boolean IsUnverifiedIdentifier;
 
     @XmlElement(name = "RequireNoActiveRequests")
-    private Boolean requireNoActiveRequests;
+    private Boolean RequireNoActiveRequests;
 }

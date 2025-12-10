@@ -107,12 +107,12 @@ public class McoApiClient {
         log.info("Подключение пользователя: {}", phoneNumber);
 
         PostBindPartnerRequest innerRequest = PostBindPartnerRequest.builder()
-                .requestId(requestId)
+                .RequestId(requestId)
                 .UserIdentifier(phoneNumber)
-                .permissionGroups(Collections.singletonList("DEFAULT"))
-                .expiredAt(LocalDateTime.now().plusDays(7))
-                .isUnverifiedIdentifier(false)
-                .requireNoActiveRequests(false)
+                .PermissionGroups(Collections.singletonList("DEFAULT"))
+                .ExpiredAt(LocalDateTime.now().plusDays(7))
+                .IsUnverifiedIdentifier(false)
+                .RequireNoActiveRequests(false)
                 .build();
 
         SendMessageRequest request = SendMessageRequest.builder()

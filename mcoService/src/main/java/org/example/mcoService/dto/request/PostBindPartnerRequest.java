@@ -21,7 +21,7 @@ public class PostBindPartnerRequest {
     private String requestId;
 
     @XmlElement(name = "UserIdentifier", required = true)
-    private String userIdentifier;
+    private String UserIdentifier;
 
     @XmlElementWrapper(name = "PermissionGroups")
     @XmlElement(name = "PermissionGroup")

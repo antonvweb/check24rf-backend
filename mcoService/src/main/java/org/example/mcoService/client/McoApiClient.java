@@ -7,6 +7,7 @@ import org.example.mcoService.dto.request.PostBindPartnerRequest;
 import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
 import org.example.mcoService.dto.request.SendMessageRequest;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,6 +160,33 @@ public class McoApiClient {
             marker = response.getNextMarker();
             hasMore = response.getTotalExpectedRemainingPolls() != null &&
                     response.getTotalExpectedRemainingPolls() > 1;
+        }
+    }
+
+    public PostBindPartnerResponse bindUserSync(String phoneNumber, String requestId) {
+        log.info("Синхронное подключение пользователя: {}", phoneNumber);
+
+        // Отправляем запрос
+        SendMessageResponse messageResponse = bindUser(phoneNumber, requestId);
+
+        log.info("Получен MessageId: {}, ожидаем результата...", messageResponse.getMessageId());
+
+        try {
+            // Опрашиваем результат (используем существующий getAsyncResult из McoSoapClient)
+            PostBindPartnerResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    PostBindPartnerResponse.class  // Укажите правильный класс ответа из DTO
+            );
+
+            log.info("Заявка обработана успешно: {}", response);  // Здесь логируйте детали ответа
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        } catch (RuntimeException e) {
+            log.error("Ошибка обработки заявки: {}", e.getMessage());
+            throw e;  // Здесь поймаете DrPlatformError
         }
     }
 }

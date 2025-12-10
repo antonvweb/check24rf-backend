@@ -4,7 +4,10 @@ import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import lombok.Data;
+import org.example.mcoService.dto.LocalDateTimeAdapter;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,6 +15,7 @@ import java.util.List;
 @XmlRootElement(name = "GetBindPartnerStatusResponse",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlJavaTypeAdapter(LocalDateTimeAdapter.class)
 public class GetBindPartnerStatusResponse {
 
     @XmlElement(name = "Statuses")

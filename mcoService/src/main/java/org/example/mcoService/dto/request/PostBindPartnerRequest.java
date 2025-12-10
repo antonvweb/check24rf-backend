@@ -1,10 +1,13 @@
 package org.example.mcoService.dto.request;
 
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.xml.bind.annotation.*;
+import org.example.mcoService.dto.LocalDateTimeAdapter;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,6 +18,7 @@ import java.util.List;
 @XmlRootElement(name = "PostBindPartnerRequest",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlJavaTypeAdapter(LocalDateTimeAdapter.class)
 public class PostBindPartnerRequest {
 
     @XmlElement(name = "RequestId", required = true)

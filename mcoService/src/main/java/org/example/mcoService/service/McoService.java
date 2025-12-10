@@ -57,7 +57,7 @@ public class McoService {
     }
 
     public String connectUser(String phone) {
-        String requestId = UUID.randomUUID().toString();
+        String requestId = UUID.randomUUID().toString().toUpperCase();
 
         PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
 

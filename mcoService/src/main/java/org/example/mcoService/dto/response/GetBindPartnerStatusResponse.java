@@ -10,7 +10,7 @@ import java.util.List;
 
 @Data
 @XmlRootElement(name = "GetBindPartnerStatusResponse",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetBindPartnerStatusResponse {
 

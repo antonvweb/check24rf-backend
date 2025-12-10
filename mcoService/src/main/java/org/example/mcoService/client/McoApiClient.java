@@ -107,7 +107,7 @@ public class McoApiClient {
         log.info("Подключение пользователя: {}", phoneNumber);
 
         PostBindPartnerRequest innerRequest = PostBindPartnerRequest.builder()
-                .RequestId(requestId)
+                .requestId(requestId)
                 .UserIdentifier(phoneNumber)
                 .PermissionGroups(Collections.singletonList("DEFAULT"))
                 .ExpiredAt(LocalDateTime.now().plusDays(7))

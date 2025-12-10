@@ -17,8 +17,8 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerRequest {
 
-    @XmlElement(name = "RequestId", required = true)
-    private String RequestId;
+    @XmlElement(name = "requestId", required = true)
+    private String requestId;
 
     @XmlElement(name = "UserIdentifier", required = true)
     private String UserIdentifier;

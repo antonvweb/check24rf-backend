@@ -16,39 +16,30 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostPlatformRegistrationRequest {
 
-    @XmlElement(name = "Name", required = true,
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Name", required = true)        // ← УБРАЛ namespace
     private String name;
 
-    @XmlElement(name = "Type", required = true,
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Type", required = true)        // ← УБРАЛ namespace
     private String type;
 
-    @XmlElement(name = "Description",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Description")                  // ← УБРАЛ namespace
     private String description;
 
-    @XmlElement(name = "TransitionLink",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "TransitionLink")
     private String transitionLink;
 
-    @XmlElement(name = "Text",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Text")
     private String text;
 
-    @XmlElement(name = "Image",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Image")
     private String image;
 
-    @XmlElement(name = "ImageFullScreen",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "ImageFullScreen")
     private String imageFullScreen;
 
-    @XmlElement(name = "Inn",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Inn")
     private String inn;
 
-    @XmlElement(name = "Phone",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Phone")
     private String phone;
 }

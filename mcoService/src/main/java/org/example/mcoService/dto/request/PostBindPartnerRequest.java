@@ -20,19 +20,19 @@ public class PostBindPartnerRequest {
     @XmlElement(name = "requestId", required = true)
     private String requestId;
 
-    @XmlElement(name = "UserIdentifier", required = true)
-    private String UserIdentifier;
+    @XmlElement(name = "userIdentifier", required = true)
+    private String userIdentifier;
 
-    @XmlElementWrapper(name = "PermissionGroups")
-    @XmlElement(name = "PermissionGroup")
-    private List<String> PermissionGroups;
+    @XmlElementWrapper(name = "permissionGroups")
+    @XmlElement(name = "permissionGroup")
+    private List<String> permissionGroups;
 
-    @XmlElement(name = "ExpiredAt")
-    private LocalDateTime ExpiredAt;
+    @XmlElement(name = "expiredAt")
+    private LocalDateTime expiredAt;
 
-    @XmlElement(name = "IsUnverifiedIdentifier")
-    private Boolean IsUnverifiedIdentifier;
+    @XmlElement(name = "isUnverifiedIdentifier")
+    private Boolean isUnverifiedIdentifier;
 
-    @XmlElement(name = "RequireNoActiveRequests")
-    private Boolean RequireNoActiveRequests;
+    @XmlElement(name = "requireNoActiveRequests")
+    private Boolean requireNoActiveRequests;
 }

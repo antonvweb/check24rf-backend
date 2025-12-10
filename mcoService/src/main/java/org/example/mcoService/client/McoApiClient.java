@@ -108,11 +108,11 @@ public class McoApiClient {
 
         PostBindPartnerRequest innerRequest = PostBindPartnerRequest.builder()
                 .requestId(requestId)
-                .UserIdentifier(phoneNumber)
-                .PermissionGroups(Collections.singletonList("DEFAULT"))
-                .ExpiredAt(LocalDateTime.now().plusDays(7))
-                .IsUnverifiedIdentifier(false)
-                .RequireNoActiveRequests(false)
+                .userIdentifier(phoneNumber)
+                .permissionGroups(Collections.singletonList("DEFAULT"))
+                .expiredAt(LocalDateTime.now().plusDays(7))
+                .isUnverifiedIdentifier(false)
+                .requireNoActiveRequests(false)
                 .build();
 
         SendMessageRequest request = SendMessageRequest.builder()

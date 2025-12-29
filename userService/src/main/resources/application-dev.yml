@@ -11,8 +11,8 @@ spring:
       write: 5s
       connect: 3s
   datasource:
-    url: jdbc:postgresql://95.213.143.142:5432/users-dev
-    username: java_dev_user
+    url: jdbc:postgresql://localhost:5432/check_rf-dev
+    username: check_user
     password: YszGyMEZmV
     driver-class-name: org.postgresql.Driver
   jpa:

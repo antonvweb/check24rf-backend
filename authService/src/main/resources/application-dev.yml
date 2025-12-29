@@ -11,13 +11,13 @@ spring:
       write: 5s
       connect: 3s
   redis:
-    host: 95.213.143.142
+    host: localhost
     port: 6379
     password: c4Ivgh
     timeout: 2000
   datasource:
-    url: jdbc:postgresql://95.213.143.142:5432/users-dev
-    username: java_dev_user
+    url: jdbc:postgresql://localhost:5432/check_rf-dev
+    username: check_user
     password: YszGyMEZmV
     driver-class-name: org.postgresql.Driver
   jpa:

@@ -13,7 +13,7 @@ spring:
       write: 5s
       connect: 3s
   datasource:
-    url: jdbc:postgresql://localhost:5432/check_rf-dev
+    url: jdbc:postgresql://localhost:5432/check_rf
     username: check_user
     password: YszGyMEZmV
     driver-class-name: org.postgresql.Driver

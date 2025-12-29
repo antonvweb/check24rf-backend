@@ -20,6 +20,7 @@ public class MonitorController {
     public Map<String, Object> getMetrics() {
         Map<String, Object> result = new HashMap<>();
 
+        // CPU load (округляем до 1 знака)
         double cpuLoad = systemMetricsService.getCpuLoad();
         result.put("cpu", Math.round(cpuLoad * 10.0) / 10.0);
 

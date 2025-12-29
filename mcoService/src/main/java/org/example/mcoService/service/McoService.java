@@ -37,7 +37,6 @@ public class McoService {
 
             String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
 
-            // ИСПОЛЬЗУЕМ СИНХРОННЫЙ МЕТОД - ОН ДОЖДЕТСЯ РЕЗУЛЬТАТА
             PostPlatformRegistrationResponse response = apiClient.registerPartnerSync(
                     properties.getPartner().getName(),
                     "Описание",

@@ -70,21 +70,18 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
 
       - name: 🔌 Test SSH connection
         run: |
-          echo "🔗 Пробуем подключиться к серверу..."
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
+
+      - name: Sync root pom.xml to server
+        run: |
+          rsync -avz ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/pom.xml
 
       - name: Sync common module to server
         run: |
@@ -154,9 +151,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete mcoService-dev || true
-            sudo pm2 start ecosystem.backend.config.js --only mcoService-dev
-            sudo pm2 save
+            pm2 delete mcoService-dev || true
+            pm2 start ecosystem.backend.config.js --only mcoService-dev
+            pm2 save
           EOF
 
   deploy-adminPanelService:
@@ -206,9 +203,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete adminPanelService-dev || true
-            sudo pm2 start ecosystem.backend.config.js --only adminPanelService-dev
-            sudo pm2 save
+            pm2 delete adminPanelService-dev || true
+            pm2 start ecosystem.backend.config.js --only adminPanelService-dev
+            pm2 save
           EOF
 
   deploy-userService:
@@ -259,9 +256,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete userService-dev || true
-            sudo pm2 start ecosystem.backend.config.js --only userService-dev
-            sudo pm2 save
+            pm2 delete userService-dev || true
+            pm2 start ecosystem.backend.config.js --only userService-dev
+            pm2 save
           EOF
 
   deploy-archiveService:
@@ -395,9 +392,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete authService-dev || true
-            sudo pm2 start ecosystem.backend.config.js --only authService-dev
-            sudo pm2 save
+            pm2 delete authService-dev || true
+            pm2 start ecosystem.backend.config.js --only authService-dev
+            pm2 save
           EOF
 
   deploy-checkService:
@@ -531,9 +528,9 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -ex
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            sudo pm2 delete billingService-dev || true
-            sudo pm2 start ecosystem.backend.config.js --only billingService-dev
-            sudo pm2 save
+            pm2 delete billingService-dev || true
+            pm2 start ecosystem.backend.config.js --only billingService-dev
+            pm2 save
           EOF
 
   deploy-supportService:

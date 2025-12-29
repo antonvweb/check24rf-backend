@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 })
 @EntityScan(basePackages = {
         "org.example.userService.entity",  // Локальные entity
-        "org.example.common.entity"
+        "org.example.common.entity"        // Entity из common модуля
 })
 @EnableJpaRepositories(basePackages = {
         "org.example.userService.repository", // Локальные repository

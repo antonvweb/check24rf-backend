@@ -26,9 +26,10 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
 
-      - name: 📤 Sync root pom.xml
+      - name: 📤 Sync root files
         run: |
           rsync -avz ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: 📤 Sync all modules
         run: |

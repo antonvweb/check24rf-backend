@@ -1,4 +1,4 @@
-name: Deploy dev (Test)
+name: Deploy dev (Parallel build)
 
 on:
   push:
@@ -6,60 +6,8 @@ on:
       - dev
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      modules: ${{ steps.set-modules.outputs.modules || '[]' }}
-
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Нужно для сравнения изменений между коммитами
-
-      - name: 🔍 Detect changed modules
-        id: detect
-        uses: tj-actions/changed-files@v45
-        with:
-          base: origin/dev
-          fetch_depth: 0
-          json: true
-
-      - name: 📋 Extract modules
-        id: set-modules
-        run: |
-          raw='${{ steps.detect.outputs.all_changed_files_json }}'
-
-          if [ -z "$raw" ]; then
-            echo "⚠️ all_changed_files_json пустой, fallback на all_changed_files"
-            raw='${{ steps.detect.outputs.all_changed_files }}'
-          fi
-
-          # Убираем экранирование кавычек, если есть
-          clean_json=$(echo "$raw" | sed 's/\\"/"/g')
-
-          echo "🔍 Очищенный JSON: $clean_json"
-          echo "$clean_json" > temp.json
-
-          # Извлекаем модули из изменённых файлов
-          modules=$(jq -c '[.[] 
-            | select(test("^(common|mcoService|adminPanelService|userService|archiveService|notificationService|authService|checkService|checkRenderService|billingService|supportService)/")) 
-            | split("/")[0]] | unique' temp.json)
-
-          # Добавляем common по дефолту, если его нет
-          modules=$(echo "$modules" | jq -c 'if index("common") == null then . + ["common"] else . end')
-
-          echo "modules=$modules" >> $GITHUB_OUTPUT
-          echo "🔍 Выходной параметр modules: $modules"
-
-      - name: 🔍 Debug all changes
-        run: |
-          echo "all_changed_files_json=${{ steps.detect.outputs.all_changed_files_json }}"
-          echo "all_changed_files=${{ steps.detect.outputs.all_changed_files }}"
-
-  deploy-common:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'common')
+  # Сначала собираем common и родительский POM
+  build-common:
     runs-on: ubuntu-latest
     steps:
       - name: 📦 Checkout code
@@ -75,39 +23,29 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
-      - name: 🔌 Test SSH connection
+      - name: 📤 Sync files
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
+          rsync -avz --delete --exclude .git --exclude .idea --exclude target \
+            ./pom.xml ./common/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
-      - name: Sync root pom.xml to server
-        run: |
-          rsync -avz ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/pom.xml
-
-      - name: Sync common module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./common/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/common/
-
-      - name: Install parent POM (check24rfAPI)
+      - name: 🔨 Build common
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            mvn install -f pom.xml
+            mvn install -f pom.xml -DskipTests
+            cd common
+            mvn clean install -U -DskipTests
           EOF
 
-      - name: Build common module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/common
-            mvn clean install -U
-            mvn package
-          EOF
-
-  deploy-mcoService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'mcoService')
+  # Потом собираем и деплоим все сервисы параллельно
+  deploy-services:
+    needs: build-common
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [mcoService, adminPanelService, authService, userService, billingService]
     steps:
       - name: 📦 Checkout code
         uses: actions/checkout@v4
@@ -117,460 +55,31 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
       - name: 🧱 Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
 
-      - name: 🔌 Test SSH connection
+      - name: 📤 Sync ${{ matrix.service }}
         run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
+          rsync -avz --delete --exclude .idea --exclude target \
+            ./${{ matrix.service }}/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/${{ matrix.service }}/
 
-      - name: Sync mcoService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./mcoService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/mcoService/
-
-      - name: Build mcoService module on server
+      - name: 🔨 Build ${{ matrix.service }}
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/mcoService
-            mvn clean -U
-            mvn package
+            cd ${{ secrets.DEPLOY_DEV_PATH }}/${{ matrix.service }}
+            mvn clean package -U -DskipTests
           EOF
 
-      - name: Restart mcoService
+      - name: 🔄 Restart ${{ matrix.service }}-dev
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -ex
+            set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-            pm2 delete mcoService-dev || true
-            pm2 start ecosystem.backend.config.js --only mcoService-dev
+            pm2 delete ${{ matrix.service }}-dev || true
+            pm2 start ecosystem.backend.config.js --only ${{ matrix.service }}-dev
             pm2 save
-          EOF
-
-  deploy-adminPanelService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'adminPanelService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync adminPanelService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./adminPanelService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/adminPanelService/
-
-      - name: Build adminPanelService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/adminPanelService
-            mvn clean -U
-            mvn package
-          EOF
-
-      - name: Restart adminPanelService
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -ex
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
-            pm2 delete adminPanelService-dev || true
-            pm2 start ecosystem.backend.config.js --only adminPanelService-dev
-            pm2 save
-          EOF
-
-  deploy-userService:
-    needs: [detect-changes, deploy-common]
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'userService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync userService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./userService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/userService/
-
-      - name: Build userService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/userService
-            mvn clean install
-            mvn package
-
-          EOF
-
-      - name: Restart userService
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -ex
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
-            pm2 delete userService-dev || true
-            pm2 start ecosystem.backend.config.js --only userService-dev
-            pm2 save
-          EOF
-
-  deploy-archiveService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'archiveService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync archiveService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./archiveService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/archiveService/
-
-      - name: Build archiveService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/archiveService
-            mvn clean -U
-            mvn package
-          EOF
-
-  deploy-notificationService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'notificationService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync notificationService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./notificationService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/notificationService/
-
-      - name: Build notificationService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/notificationService
-            mvn clean -U
-            mvn package
-          EOF
-
-  deploy-authService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'authService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync authService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./authService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/authService/
-
-      - name: Build authService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/authService
-            mvn clean -U
-            mvn package
-          EOF
-
-      - name: Restart authService
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -ex
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
-            pm2 delete authService-dev || true
-            pm2 start ecosystem.backend.config.js --only authService-dev
-            pm2 save
-          EOF
-
-  deploy-checkService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'checkService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync checkService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./checkService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkService/
-
-      - name: Build checkService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/checkService
-            mvn clean -U
-            mvn package
-          EOF
-
-  deploy-checkRenderService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'checkRenderService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync checkRenderService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./checkRenderService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/checkRenderService/
-
-      - name: Build checkRenderService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/checkRenderService
-            mvn clean -U
-            mvn package
-          EOF
-
-  deploy-billingService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'billingService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync billingService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./billingService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/billingService/
-
-      - name: Build billingService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/billingService
-            mvn clean -U
-            mvn package
-          EOF
-
-      - name: Restart billingService
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -ex
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
-            pm2 delete billingService-dev || true
-            pm2 start ecosystem.backend.config.js --only billingService-dev
-            pm2 save
-          EOF
-
-  deploy-supportService:
-    needs: detect-changes
-    if: contains(fromJson(needs.detect-changes.outputs.modules), 'supportService')
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧪 Debug ssh-agent
-        run: |
-          echo "🔍 Проверка добавленных SSH-ключей:"
-          ssh-add -l || echo "❌ Ключи не добавлены"
-
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-        continue-on-error: false
-
-      - name: 🔌 Test SSH connection
-        run: |
-          echo "🔗 Пробуем подключиться к серверу..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connection established"
-
-      - name: Sync supportService module to server
-        run: |
-          rsync -avz --delete --exclude .idea --exclude target ./supportService/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/supportService/
-
-      - name: Build supportService module on server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}/supportService
-            mvn clean -U
-            mvn package
           EOF

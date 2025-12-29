@@ -30,7 +30,6 @@ public class AuthController {
     @PostMapping("/verify-captcha")
     public ResponseEntity<?> verifyCaptcha(@RequestBody @Valid CaptchaRequest req, HttpServletRequest request){
         log.info("Captcha token received: {}", req.getCaptchaToken());
-        // СНАЧАЛА проверяем каптчу
         String userIP = ipUtils.getClientIP(request);  // Теперь правильно используем request
         boolean captchaValid = captchaService.validateCaptchaSync(
                 req.getCaptchaToken(),

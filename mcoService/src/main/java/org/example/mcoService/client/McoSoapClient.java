@@ -47,7 +47,7 @@ public class McoSoapClient {
             return responseClass.cast(response);
 
         } catch (Exception e) {
-            log.error("Ошибка при отправке SOAP запроса", e);
+            log.error("Ошибка при отправке SOAP запрос", e);
             throw new RuntimeException("Ошибка взаимодействия с API МЧО", e);
         }
     }

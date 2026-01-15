@@ -1,0 +1,88 @@
+name: Deploy dev (All modules)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy-all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 🧱 Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: 🔌 Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
+
+      - name: 📤 Sync root files
+        run: |
+          rsync -avz ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+
+      - name: 📤 Sync all modules
+        run: |
+          MODULES="common mcoService adminPanelService userService archiveService notificationService authService checkService checkRenderService billingService supportService"
+          
+          for module in $MODULES; do
+            echo "📦 Syncing $module..."
+            rsync -avz --delete \
+              --exclude .git \
+              --exclude .idea \
+              --exclude target \
+              --exclude node_modules \
+              ./$module/ \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/$module/
+          done
+
+      - name: 🔨 Build all modules on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            set -e
+            cd ${{ secrets.DEPLOY_DEV_PATH }}
+          
+            echo "📦 Installing parent POM..."
+            mvn clean install -f pom.xml -DskipTests
+          
+            echo "🔨 Building common module..."
+            cd common
+            mvn clean install -U -DskipTests
+            cd ..
+          
+            echo "🔨 Building all services..."
+            for service in mcoService adminPanelService userService archiveService notificationService authService checkService checkRenderService billingService supportService; do
+              if [ -d "$service" ]; then
+                echo "📦 Building $service..."
+                cd $service
+                mvn clean package -U -DskipTests
+                cd ..
+              fi
+            done
+          
+            echo "✅ All modules built successfully!"
+          EOF
+
+      - name: 🔄 Restart all PM2 services
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            set -e
+            cd ${{ secrets.DEPLOY_DEV_PATH }}
+          
+            echo "🔄 Restarting all services..."
+            pm2 restart ecosystem.backend.config.js || pm2 start ecosystem.backend.config.js
+            pm2 save
+          
+            echo "📊 PM2 status:"
+            pm2 list
+          EOF

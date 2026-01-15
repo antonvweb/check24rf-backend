@@ -74,7 +74,7 @@ jobs:
               fi
             done
           
-            echo "✅ All modules built successfully!"
+            echo "All modules built successfully!"
           EOF
 
       - name: 🔄 Restart all PM2 services

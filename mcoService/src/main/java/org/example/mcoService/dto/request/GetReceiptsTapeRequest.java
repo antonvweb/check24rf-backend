@@ -16,6 +16,7 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetReceiptsTapeRequest {
 
-    @XmlElement(name = "Marker", required = true)
+    @XmlElement(name = "Marker", required = true,
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
     private String marker;
 }

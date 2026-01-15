@@ -17,19 +17,14 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 🧱 Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p 2222 -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
       - name: ✅ SSH Connection Test
         run: |
-          ssh -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
 
       - name: 📤 Sync root files
         run: |
-          rsync -avz -e "ssh -p 2222" ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
-          rsync -avz -e "ssh -p 2222" ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222" ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222" ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: 📤 Sync all modules
         run: |
@@ -38,7 +33,7 @@ jobs:
           for module in $MODULES; do
             echo "📦 Syncing $module..."
             rsync -avz --delete \
-              -e "ssh -p 2222" \
+              -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222" \
               --exclude .git \
               --exclude .idea \
               --exclude target \
@@ -49,7 +44,7 @@ jobs:
 
       - name: 🔨 Build all modules on server
         run: |
-          ssh -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
           
@@ -76,7 +71,7 @@ jobs:
 
       - name: 🔄 Restart all PM2 services
         run: |
-          ssh -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
           

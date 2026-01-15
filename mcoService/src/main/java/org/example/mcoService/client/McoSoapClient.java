@@ -52,13 +52,23 @@ public class McoSoapClient {
         }
     }
 
+    // ============================================
+// ЗАМЕНИТЕ МЕТОД getAsyncResult() в McoSoapClient.java
+// ============================================
+
     public <T> T getAsyncResult(String messageId, Class<T> responseClass) throws InterruptedException {
-        int maxAttempts = 10;
+        // УВЕЛИЧЕНО: было 10 попыток (20 сек), стало 30 попыток (60 сек)
+        int maxAttempts = 30;
         int attempt = 0;
+
+        log.info(">>> Начинаем опрос результата по MessageId: {}", messageId);
+        log.info("Максимум попыток: {}, интервал: 2 сек, общее время: {} сек",
+                maxAttempts, maxAttempts * 2);
 
         while (attempt < maxAttempts) {
             try {
-                log.debug("Опрос результата по MessageId: {}, попытка {}", messageId, attempt + 1);
+                attempt++;
+                log.debug("⏳ Попытка {}/{} - опрос результата...", attempt, maxAttempts);
 
                 GetMessageRequest request = GetMessageRequest.builder()
                         .messageId(messageId)
@@ -99,7 +109,13 @@ public class McoSoapClient {
                 );
 
                 if (response instanceof GetMessageResponse getMessageResponse) {
-                    if ("COMPLETED".equals(getMessageResponse.getProcessingStatus())) {
+                    String status = getMessageResponse.getProcessingStatus();
+                    log.debug("📊 Статус обработки: {}", status);
+
+                    if ("COMPLETED".equals(status)) {
+                        log.info("✅ Запрос обработан успешно за {} попыток ({} сек)",
+                                attempt, attempt * 2);
+
                         if (getMessageResponse.getMessage() != null &&
                                 getMessageResponse.getMessage().getContent() != null) {
 
@@ -109,27 +125,57 @@ public class McoSoapClient {
                             if (content instanceof DrPlatformError error) {
                                 String errorMsg = String.format("Ошибка API МЧО: [%s] %s",
                                         error.getCode(), error.getMessage());
-                                log.error(errorMsg);
+                                log.error("❌ {}", errorMsg);
                                 throw new RuntimeException(errorMsg);
                             }
 
                             return responseClass.cast(content);
+                        } else {
+                            log.warn("⚠️ COMPLETED но нет content в ответе");
                         }
-                    } else if ("FAILED".equals(getMessageResponse.getProcessingStatus())) {
+
+                    } else if ("FAILED".equals(status)) {
+                        log.error("❌ Обработка запроса завершилась с ошибкой");
                         throw new RuntimeException("Обработка запроса завершилась с ошибкой");
+
+                    } else if ("PROCESSING".equals(status)) {
+                        log.debug("⏳ Обработка еще не завершена, ожидаем...");
+                        // Продолжаем опрос
+                    } else {
+                        log.warn("⚠️ Неизвестный статус: {}", status);
                     }
                 }
 
                 // Ждем 2 секунды перед следующей попыткой
-                Thread.sleep(2000);
-                attempt++;
+                if (attempt < maxAttempts) {
+                    Thread.sleep(2000);
+                }
 
+            } catch (InterruptedException e) {
+                log.error("❌ Прервано ожидание на попытке {}", attempt);
+                throw e;
             } catch (Exception e) {
-                log.error("Ошибка при опросе результата", e);
+                log.error("❌ Ошибка при опросе результата на попытке {}: {}",
+                        attempt, e.getMessage());
                 throw new RuntimeException("Ошибка получения результата", e);
             }
         }
 
-        throw new RuntimeException("Превышено время ожидания результата");
+        log.error("❌ ПРЕВЫШЕНО ВРЕМЯ ОЖИДАНИЯ!");
+        log.error("Выполнено {} попыток за {} секунд", maxAttempts, maxAttempts * 2);
+        log.error("MessageId: {}", messageId);
+        log.error("");
+        log.error("ВОЗМОЖНЫЕ ПРИЧИНЫ:");
+        log.error("  1. Запрос обрабатывается слишком долго (много данных)");
+        log.error("  2. Проблема на стороне сервера МЧО");
+        log.error("  3. Неправильный формат запроса");
+        log.error("");
+        log.error("ЧТО ДЕЛАТЬ:");
+        log.error("  1. Проверьте сохраненные XML файлы (soap-request-*.xml и soap-response-*.xml)");
+        log.error("  2. Попробуйте запрос позже");
+        log.error("  3. Обратитесь в поддержку МЧО если проблема повторяется");
+
+        throw new RuntimeException("Превышено время ожидания результата (попыток: " +
+                maxAttempts + ", время: " + (maxAttempts * 2) + " сек)");
     }
 }

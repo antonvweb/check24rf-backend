@@ -17,22 +17,12 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerRequest {
 
-    @XmlElement(name = "requestId", required = true)
-    private String requestId;
+    @XmlElement(name = "RequestId", required = true)
+    private String RequestId;
 
-    @XmlElement(name = "userIdentifier", required = true)
-    private String userIdentifier;
+    @XmlElement(name = "UserIdentifier", required = true)
+    private String UserIdentifier;
 
-    @XmlElementWrapper(name = "permissionGroups")
-    @XmlElement(name = "permissionGroup")
-    private List<String> permissionGroups;
-
-    @XmlElement(name = "expiredAt")
-    private LocalDateTime expiredAt;
-
-    @XmlElement(name = "isUnverifiedIdentifier")
-    private Boolean isUnverifiedIdentifier;
-
-    @XmlElement(name = "requireNoActiveRequests")
-    private Boolean requireNoActiveRequests;
+    @XmlElement(name = "PermissionGroups")
+    private List<String> PermissionGroups;
 }

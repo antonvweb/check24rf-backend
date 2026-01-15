@@ -17,12 +17,27 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostBindPartnerRequest {
 
-    @XmlElement(name = "RequestId", required = true)
-    private String RequestId;
+    @XmlElement(name = "RequestId", required = true,
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private String requestId;
 
-    @XmlElement(name = "UserIdentifier", required = true)
-    private String UserIdentifier;
+    @XmlElement(name = "UserIdentifier", required = true,
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private String userIdentifier;
 
-    @XmlElement(name = "PermissionGroups")
-    private List<String> PermissionGroups;
+    @XmlElement(name = "PermissionGroups",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private List<String> permissionGroups;
+
+    @XmlElement(name = "ExpiredAt",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private LocalDateTime expiredAt;
+
+    @XmlElement(name = "IsUnverifiedIdentifier",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private Boolean isUnverifiedIdentifier;
+
+    @XmlElement(name = "RequireNoActiveRequests",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    private Boolean requireNoActiveRequests;
 }

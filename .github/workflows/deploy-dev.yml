@@ -12,32 +12,46 @@ jobs:
       - name: 📦 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔐 Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: 🧱 Add server to known_hosts
+      - name: 🔐 Setup SSH key
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # Проверяем формат ключа
+          echo "🔍 Checking key format..."
+          head -1 ~/.ssh/deploy_key
 
-      - name: 🔌 Test SSH connection
+      - name: ✅ SSH Connection Test
+        env:
+          SSH_AUTH_SOCK: ""
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
+          ssh -i ~/.ssh/deploy_key \
+              -o IdentitiesOnly=yes \
+              -o PreferredAuthentications=publickey \
+              -o PubkeyAuthentication=yes \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
 
       - name: 📤 Sync root files
+        env:
+          SSH_AUTH_SOCK: ""
         run: |
-          rsync -avz ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
-          rsync -avz ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+            ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+            ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: 📤 Sync all modules
+        env:
+          SSH_AUTH_SOCK: ""
         run: |
           MODULES="common mcoService adminPanelService userService archiveService notificationService authService checkService checkRenderService billingService supportService"
           
           for module in $MODULES; do
             echo "📦 Syncing $module..."
             rsync -avz --delete \
+              -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
               --exclude .git \
               --exclude .idea \
               --exclude target \
@@ -47,8 +61,13 @@ jobs:
           done
 
       - name: 🔨 Build all modules on server
+        env:
+          SSH_AUTH_SOCK: ""
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key \
+              -o IdentitiesOnly=yes \
+              -o PreferredAuthentications=publickey \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
           
@@ -70,12 +89,17 @@ jobs:
               fi
             done
           
-            echo "✅ All modules built successfully!"
+            echo "All modules built successfully!"
           EOF
 
       - name: 🔄 Restart all PM2 services
+        env:
+          SSH_AUTH_SOCK: ""
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key \
+              -o IdentitiesOnly=yes \
+              -o PreferredAuthentications=publickey \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
           

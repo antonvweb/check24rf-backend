@@ -1,9 +1,9 @@
-name: Deploy dev (All modules)
+name: Deploy main (All modules)
 
 on:
   push:
     branches:
-      - dev
+      - main
 
 jobs:
   deploy-all:

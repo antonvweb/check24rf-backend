@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.dto.response.SendMessageResponse;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -131,12 +134,18 @@ public class McoController {
     @PostMapping("/bind-user")
     public ResponseEntity<String> bindUser(@RequestParam String phone) {
         try {
-            String messageId = mcoService.connectUser(phone);
+            String requestId = mcoService.connectUser(phone);
             return ResponseEntity.ok(
-                    "✅ Заявка на подключение отправлена!\n" +
-                            "MessageId: " + messageId + "\n\n" +
-                            "⚠️ ВАЖНО: Пользователь должен одобрить заявку в ЛК МЧО:\n" +
-                            "https://dr.stm-labs.ru/"
+                    "✅ Заявка на подключение отправлена!\n\n" +
+                            "📋 ВАЖНО - Сохраните RequestId:\n" +
+                            "RequestId: " + requestId + "\n\n" +
+                            "🔍 Проверить статус заявки:\n" +
+                            "GET /api/mco/bind-request-status?requestId=" + requestId + "\n\n" +
+                            "⚠️ СЛЕДУЮЩИЕ ШАГИ:\n" +
+                            "1. Пользователь должен одобрить заявку в ЛК МЧО:\n" +
+                            "   https://dr.stm-labs.ru/\n" +
+                            "2. Проверьте статус через несколько минут\n" +
+                            "3. Статус REQUEST_APPROVED = успешно подключен!"
             );
         } catch (Exception e) {
             log.error("Ошибка подключения пользователя", e);
@@ -154,24 +163,35 @@ public class McoController {
         String testPhone = "79054455906";
 
         try {
-            String messageId = mcoService.connectUser(testPhone);
+            String requestId = mcoService.connectUser(testPhone);
             return ResponseEntity.ok(
-                    "✅ Тестовая заявка на подключение отправлена!\n" +
-                            "Телефон: " + testPhone + "\n" +
-                            "MessageId: " + messageId + "\n\n" +
-                            "СЛЕДУЮЩИЕ ШАГИ:\n" +
+                    "✅ Тестовая заявка на подключение отправлена!\n\n" +
+                            "📋 СОХРАНИТЕ RequestId:\n" +
+                            "RequestId: " + requestId + "\n" +
+                            "Телефон: " + testPhone + "\n\n" +
+                            "🔍 ПРОВЕРИТЬ СТАТУС:\n" +
+                            "GET /api/mco/bind-request-status?requestId=" + requestId + "\n\n" +
+                            "📝 СЛЕДУЮЩИЕ ШАГИ:\n" +
                             "1. Зайдите в ЛК МЧО: https://dr.stm-labs.ru/partners\n" +
                             "2. Найдите заявку от пользователя " + testPhone + "\n" +
                             "3. Одобрите заявку\n" +
-                            "4. Попросите пользователя отсканировать чек в приложении МЧО\n" +
-                            "5. Проверьте получение чеков через /test-receipts"
+                            "4. Проверьте статус через эндпоинт выше\n" +
+                            "5. Когда статус станет REQUEST_APPROVED:\n" +
+                            "   - Попросите пользователя отсканировать чек в приложении МЧО\n" +
+                            "   - Тестируйте получение чеков: GET /api/mco/test-receipts\n\n" +
+                            "💡 ВОЗМОЖНЫЕ СТАТУСЫ:\n" +
+                            "• WAIT - ожидает одобрения пользователем\n" +
+                            "• REQUEST_APPROVED - одобрена, можно получать чеки\n" +
+                            "• REQUEST_REJECTED - отклонена\n" +
+                            "• REQUEST_EXPIRED - заявка устарела"
             );
         } catch (Exception e) {
             log.error("Ошибка подключения тестового пользователя", e);
             return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
+                    .body("❌ Ошибка подключения: " + e.getMessage());
         }
     }
+
 
     // ==========================================
     // РАБОТА С ЧЕКАМИ
@@ -466,5 +486,158 @@ public class McoController {
             return ResponseEntity.status(500)
                     .body("❌ Ошибка: " + e.getMessage());
         }
+    }
+
+    // ============================================
+// ЭНДПОИНТЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
+// Добавить эти методы в класс McoController
+// ============================================
+
+    /**
+     * Проверка статуса одной заявки
+     * GET http://localhost:8085/api/mco/bind-request-status?requestId=YOUR_REQUEST_ID
+     */
+    @GetMapping("/bind-request-status")
+    public ResponseEntity<String> getBindRequestStatus(@RequestParam String requestId) {
+        try {
+            log.info("Проверка статуса заявки: {}", requestId);
+
+            GetBindPartnerStatusResponse.BindPartnerStatus status =
+                    mcoService.checkBindRequestStatus(requestId);
+
+            StringBuilder result = new StringBuilder();
+            result.append("╔════════════════════════════════════════════════════╗\n");
+            result.append("║   📋 СТАТУС ЗАЯВКИ НА ПОДКЛЮЧЕНИЕ                 ║\n");
+            result.append("╚════════════════════════════════════════════════════╝\n\n");
+
+            result.append("RequestId: ").append(status.getRequestId()).append("\n");
+            result.append("Пользователь: ").append(status.getUserIdentifier()).append("\n");
+            result.append("Статус: ");
+
+            switch (status.getResult()) {
+                case "WAIT":
+                    result.append("⏳ ОЖИДАЕТ ОБРАБОТКИ\n");
+                    result.append("\nПользователь еще не одобрил заявку в ЛК МЧО.\n");
+                    result.append("Попросите пользователя зайти на https://dr.stm-labs.ru/");
+                    break;
+
+                case "REQUEST_APPROVED":
+                    result.append("✅ ОДОБРЕНА\n");
+                    result.append("\nПользователь успешно подключен к партнеру!\n");
+                    result.append("Теперь вы можете получать его чеки через GetReceiptsTape.");
+                    break;
+
+                case "REQUEST_REJECTED":
+                    result.append("❌ ОТКЛОНЕНА\n");
+                    if (status.getRejectionReasonMessage() != null) {
+                        result.append("\nПричина отказа: ").append(status.getRejectionReasonMessage());
+                    }
+                    break;
+
+                case "REQUEST_EXPIRED":
+                    result.append("⌛ ИСТЕКЛА\n");
+                    result.append("\nЗаявка устарела. Нужно отправить новую заявку.");
+                    break;
+
+                default:
+                    result.append("❓ НЕИЗВЕСТНЫЙ СТАТУС: ").append(status.getResult());
+            }
+
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            log.error("Ошибка проверки статуса заявки", e);
+            return ResponseEntity.status(500)
+                    .body("❌ Ошибка: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Проверка статусов нескольких заявок
+     * POST http://localhost:8085/api/mco/bind-requests-status
+     * Body (JSON): ["REQUEST_ID_1", "REQUEST_ID_2", "REQUEST_ID_3"]
+     */
+    @PostMapping("/bind-requests-status")
+    public ResponseEntity<String> getBindRequestsStatus(@RequestBody List<String> requestIds) {
+        try {
+            log.info("Проверка статусов заявок, количество: {}", requestIds.size());
+
+            if (requestIds.size() > 50) {
+                return ResponseEntity.badRequest()
+                        .body("❌ Максимум 50 requestIds за один запрос");
+            }
+
+            List<GetBindPartnerStatusResponse.BindPartnerStatus> statuses =
+                    mcoService.checkBindRequestStatuses(requestIds);
+
+            StringBuilder result = new StringBuilder();
+            result.append("╔════════════════════════════════════════════════════╗\n");
+            result.append("║   📋 СТАТУСЫ ЗАЯВОК НА ПОДКЛЮЧЕНИЕ                ║\n");
+            result.append("╚════════════════════════════════════════════════════╝\n\n");
+
+            result.append("Всего заявок: ").append(statuses.size()).append("\n\n");
+
+            // Группируем по статусам
+            long approved = statuses.stream()
+                    .filter(s -> "REQUEST_APPROVED".equals(s.getResult())).count();
+            long waiting = statuses.stream()
+                    .filter(s -> "WAIT".equals(s.getResult())).count();
+            long rejected = statuses.stream()
+                    .filter(s -> "REQUEST_REJECTED".equals(s.getResult())).count();
+            long expired = statuses.stream()
+                    .filter(s -> "REQUEST_EXPIRED".equals(s.getResult())).count();
+
+            result.append("СВОДКА:\n");
+            result.append("✅ Одобрено: ").append(approved).append("\n");
+            result.append("⏳ Ожидает: ").append(waiting).append("\n");
+            result.append("❌ Отклонено: ").append(rejected).append("\n");
+            result.append("⌛ Истекло: ").append(expired).append("\n\n");
+
+            result.append("ДЕТАЛИ:\n");
+            statuses.forEach(status -> {
+                String statusIcon = switch (status.getResult()) {
+                    case "REQUEST_APPROVED" -> "✅";
+                    case "WAIT" -> "⏳";
+                    case "REQUEST_REJECTED" -> "❌";
+                    case "REQUEST_EXPIRED" -> "⌛";
+                    default -> "❓";
+                };
+
+                result.append(statusIcon)
+                        .append(" ")
+                        .append(status.getUserIdentifier())
+                        .append(" - ")
+                        .append(status.getResult());
+
+                if ("REQUEST_REJECTED".equals(status.getResult()) &&
+                        status.getRejectionReasonMessage() != null) {
+                    result.append(" (").append(status.getRejectionReasonMessage()).append(")");
+                }
+
+                result.append("\n");
+            });
+
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            log.error("Ошибка проверки статусов заявок", e);
+            return ResponseEntity.status(500)
+                    .body("❌ Ошибка: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Тестовый эндпоинт для проверки статуса тестового пользователя
+     * GET http://localhost:8085/api/mco/test-bind-status
+     */
+    @GetMapping("/test-bind-status")
+    public ResponseEntity<String> testBindStatus() {
+        return ResponseEntity.ok(
+                "⚠️ Для проверки статуса нужен RequestId заявки.\n\n" +
+                        "Используйте:\n" +
+                        "GET /api/mco/bind-request-status?requestId=YOUR_REQUEST_ID\n\n" +
+                        "RequestId возвращается при вызове /api/mco/bind-user\n" +
+                        "Сохраните его для последующей проверки статуса."
+        );
     }
 }

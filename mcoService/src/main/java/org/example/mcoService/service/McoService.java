@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.dto.response.PostBindPartnerResponse;
 import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
@@ -13,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -22,6 +25,63 @@ public class McoService {
 
     private final McoApiClient apiClient;
     private final McoProperties properties;
+
+    // ============================================
+// МЕТОДЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
+// Добавить эти методы в конец класса McoService
+// ============================================
+
+    /**
+     * Получение статуса заявки на подключение пользователя
+     *
+     * @param requestId идентификатор заявки
+     * @return информация о статусе заявки
+     */
+    public GetBindPartnerStatusResponse.BindPartnerStatus checkBindRequestStatus(String requestId) {
+        log.info("Проверка статуса заявки: {}", requestId);
+
+        GetBindPartnerStatusResponse response = apiClient.getBindRequestStatusSync(
+                Collections.singletonList(requestId)
+        );
+
+        if (response.getStatuses() == null || response.getStatuses().isEmpty()) {
+            throw new RuntimeException("Не получен статус для requestId: " + requestId);
+        }
+
+        return response.getStatuses().get(0);
+    }
+
+    /**
+     * Получение статусов нескольких заявок
+     *
+     * @param requestIds список идентификаторов заявок (до 50 штук)
+     * @return список статусов
+     */
+    public List<GetBindPartnerStatusResponse.BindPartnerStatus> checkBindRequestStatuses(List<String> requestIds) {
+        log.info("Проверка статусов заявок, количество: {}", requestIds.size());
+
+        if (requestIds.size() > 50) {
+            throw new IllegalArgumentException("Максимум 50 requestIds за один запрос");
+        }
+
+        GetBindPartnerStatusResponse response = apiClient.getBindRequestStatusSync(requestIds);
+
+        return response.getStatuses() != null ? response.getStatuses() : Collections.emptyList();
+    }
+
+    /**
+     * Проверка статуса последней заявки для пользователя
+     * Для удобства тестирования
+     *
+     * @param phone номер телефона пользователя
+     * @return статус заявки (если она была создана через connectUser)
+     */
+    public String checkUserBindStatus(String phone) {
+        // Примечание: для полноценной работы нужно сохранять requestId при вызове connectUser
+        // Пока что это демонстрационный метод
+        log.warn("Метод checkUserBindStatus требует сохранения requestId при создании заявки");
+        throw new UnsupportedOperationException("Нужно сохранять requestId в базу при вызове connectUser");
+    }
 
     /**
      * Регистрация партнера в системе МЧО
@@ -60,20 +120,32 @@ public class McoService {
         }
     }
 
+    // ============================================
+// УЛУЧШЕННАЯ ВЕРСИЯ connectUser
+// ЗАМЕНИТЬ существующий метод connectUser в McoService
+// ============================================
+
     /**
      * Подключение пользователя к партнеру
      * @param phone номер телефона пользователя
-     * @return MessageId для отслеживания статуса заявки
+     * @return RequestId для отслеживания статуса заявки (НЕ MessageId!)
      */
     public String connectUser(String phone) {
+        // Генерируем RequestId - именно его нужно сохранять для проверки статуса!
         String requestId = UUID.randomUUID().toString().toUpperCase();
+
+        log.info("Создание заявки на подключение пользователя {}, RequestId: {}", phone, requestId);
 
         PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
 
-        log.info("Заявка на подключение пользователя {} отправлена, MessageId: {}, RequestId: {}",
-                phone, response.getMessageId(), requestId);
+        log.info("✅ Заявка на подключение отправлена");
+        log.info("   RequestId: {} - СОХРАНИТЕ ЕГО для проверки статуса!", requestId);
+        log.info("   MessageId: {}", response.getMessageId());
+        log.info("   Проверить статус: GET /api/mco/bind-request-status?requestId={}", requestId);
 
-        return response.getMessageId();
+        // ВАЖНО: возвращаем RequestId, а не MessageId!
+        // RequestId нужен для метода GetBindPartnerStatusRequest
+        return requestId;
     }
 
     /**

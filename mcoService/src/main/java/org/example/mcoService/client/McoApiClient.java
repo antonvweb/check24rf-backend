@@ -2,19 +2,14 @@ package org.example.mcoService.client;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.mcoService.dto.request.GetReceiptsTapeRequest;
-import org.example.mcoService.dto.request.PostBindPartnerRequest;
-import org.example.mcoService.dto.request.PostPlatformRegistrationRequest;
-import org.example.mcoService.dto.request.SendMessageRequest;
-import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
-import org.example.mcoService.dto.response.PostBindPartnerResponse;
-import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
-import org.example.mcoService.dto.response.SendMessageResponse;
+import org.example.mcoService.dto.request.*;
+import org.example.mcoService.dto.response.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -23,6 +18,107 @@ public class McoApiClient {
 
     @Autowired
     private McoSoapClient soapClient;
+
+    // ============================================
+// МЕТОДЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
+// Добавить эти методы в конец класса McoApiClient
+// ============================================
+
+    /**
+     * Получение статуса заявок на подключение пользователей
+     *
+     * @param requestIds список RequestId заявок (до 50 штук)
+     * @return ответ со статусами заявок
+     */
+    public GetBindPartnerStatusResponse getBindRequestStatus(List<String> requestIds) {
+        log.info("Запрос статуса заявок, количество: {}", requestIds.size());
+
+        if (requestIds == null || requestIds.isEmpty()) {
+            throw new IllegalArgumentException("Список requestIds не может быть пустым");
+        }
+
+        if (requestIds.size() > 50) {
+            throw new IllegalArgumentException("Максимум 50 requestIds за один запрос");
+        }
+
+        GetBindPartnerStatusRequest innerRequest = GetBindPartnerStatusRequest.builder()
+                .requestIds(requestIds)
+                .build();
+
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        return soapClient.sendSoapRequest(
+                request,
+                GetBindPartnerStatusResponse.class,
+                "SendMessageRequest"
+        );
+    }
+
+    /**
+     * СИНХРОННОЕ получение статуса заявок с автоматическим опросом результата
+     *
+     * @param requestIds список RequestId заявок (до 50 штук)
+     * @return ответ со статусами заявок
+     */
+    public GetBindPartnerStatusResponse getBindRequestStatusSync(List<String> requestIds) {
+        log.info(">>> Синхронный запрос статуса заявок, количество: {}", requestIds.size());
+
+        if (requestIds == null || requestIds.isEmpty()) {
+            throw new IllegalArgumentException("Список requestIds не может быть пустым");
+        }
+
+        if (requestIds.size() > 50) {
+            throw new IllegalArgumentException("Максимум 50 requestIds за один запрос");
+        }
+
+        // Создаем внутренний запрос
+        GetBindPartnerStatusRequest innerRequest = GetBindPartnerStatusRequest.builder()
+                .requestIds(requestIds)
+                .build();
+
+        // Оборачиваем в SendMessageRequest
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        // Отправляем асинхронный запрос
+        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
+
+        log.info("Запрос отправлен, MessageId: {}, опрашиваем результат...",
+                messageResponse.getMessageId());
+
+        try {
+            // Опрашиваем результат
+            GetBindPartnerStatusResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    GetBindPartnerStatusResponse.class
+            );
+
+            int statusesCount = response.getStatuses() != null ? response.getStatuses().size() : 0;
+            log.info("✅ Получено статусов: {}", statusesCount);
+
+            if (response.getStatuses() != null) {
+                response.getStatuses().forEach(status -> {
+                    log.info("  RequestId: {}, Result: {}, UserIdentifier: {}",
+                            status.getRequestId(),
+                            status.getResult(),
+                            status.getUserIdentifier());
+                });
+            }
+
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
 
     public SendMessageResponse registerPartner(
             String name,

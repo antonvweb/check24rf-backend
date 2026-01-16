@@ -53,11 +53,11 @@ public class McoSoapClient {
     }
 
     // ============================================
-// ЗАМЕНИТЕ МЕТОД getAsyncResult() в McoSoapClient.java
+// ИСПРАВЛЕННАЯ ВЕРСИЯ getAsyncResult()
+// ЗАМЕНИТЬ в файле McoSoapClient.java
 // ============================================
 
     public <T> T getAsyncResult(String messageId, Class<T> responseClass) throws InterruptedException {
-        // УВЕЛИЧЕНО: было 10 попыток (20 сек), стало 30 попыток (60 сек)
         int maxAttempts = 30;
         int attempt = 0;
 
@@ -69,10 +69,6 @@ public class McoSoapClient {
             try {
                 attempt++;
                 log.debug("⏳ Попытка {}/{} - опрос результата...", attempt, maxAttempts);
-
-                GetMessageRequest request = GetMessageRequest.builder()
-                        .messageId(messageId)
-                        .build();
 
                 // Создаем GetMessageRequest вручную
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -121,61 +117,84 @@ public class McoSoapClient {
 
                             Object content = getMessageResponse.getMessage().getContent();
 
-                            // Проверяем на ошибку
-                            if (content instanceof DrPlatformError error) {
-                                String errorMsg = String.format("Ошибка API МЧО: [%s] %s",
-                                        error.getCode(), error.getMessage());
-                                log.error("❌ {}", errorMsg);
-                                throw new RuntimeException(errorMsg);
+                            // ============================================
+                            // ИСПРАВЛЕНИЕ: Вручную парсим Element в нужный тип
+                            // ============================================
+                            if (content instanceof Element element) {
+                                log.debug("Парсим Element в {}", responseClass.getSimpleName());
+
+                                try {
+                                    // Создаем DOMSource из Element
+                                    DOMSource source = new DOMSource(element);
+
+                                    // Парсим через JAXB marshaller
+                                    Object unmarshalled = marshaller.unmarshal(source);
+
+                                    if (responseClass.isInstance(unmarshalled)) {
+                                        log.debug("✅ Успешно распарсили в {}", responseClass.getSimpleName());
+                                        return responseClass.cast(unmarshalled);
+                                    } else {
+                                        throw new RuntimeException(
+                                                "Unexpected response type: " + unmarshalled.getClass().getName() +
+                                                        ", expected: " + responseClass.getName()
+                                        );
+                                    }
+                                } catch (Exception e) {
+                                    log.error("❌ Ошибка парсинга Element: {}", e.getMessage());
+                                    throw new RuntimeException("Ошибка парсинга ответа", e);
+                                }
+                            } else if (responseClass.isInstance(content)) {
+                                // Если это уже нужный тип (маловероятно, но проверим)
+                                log.debug("Контент уже нужного типа: {}", responseClass.getSimpleName());
+                                return responseClass.cast(content);
+                            } else {
+                                throw new RuntimeException(
+                                        "Cannot process content of type: " + content.getClass().getName()
+                                );
                             }
-
-                            return responseClass.cast(content);
                         } else {
-                            log.warn("⚠️ COMPLETED но нет content в ответе");
+                            throw new RuntimeException("Response message is empty");
                         }
-
-                    } else if ("FAILED".equals(status)) {
-                        log.error("❌ Обработка запроса завершилась с ошибкой");
-                        throw new RuntimeException("Обработка запроса завершилась с ошибкой");
 
                     } else if ("PROCESSING".equals(status)) {
                         log.debug("⏳ Обработка еще не завершена, ожидаем...");
-                        // Продолжаем опрос
+                        Thread.sleep(2000);
+
+                    } else if ("FAILED".equals(status)) {
+                        log.error("❌ Запрос завершился с ошибкой");
+                        throw new RuntimeException("Processing failed on server");
+
                     } else {
                         log.warn("⚠️ Неизвестный статус: {}", status);
+                        Thread.sleep(2000);
                     }
-                }
 
-                // Ждем 2 секунды перед следующей попыткой
-                if (attempt < maxAttempts) {
-                    Thread.sleep(2000);
+                } else if (response instanceof DrPlatformError error) {
+                    log.error("❌ Получена ошибка от ФНС:");
+                    log.error("Код: {}", error.getCode());
+                    log.error("Сообщение: {}", error.getMessage());
+                    throw new RuntimeException("ФНС вернул ошибку: " + error.getCode() + " - " + error.getMessage());
+
+                } else {
+                    log.error("❌ Неожиданный тип ответа: {}", response != null ? response.getClass().getName() : "null");
+                    throw new RuntimeException("Unexpected response type");
                 }
 
             } catch (InterruptedException e) {
-                log.error("❌ Прервано ожидание на попытке {}", attempt);
+                log.error("❌ Прервано ожидание результата");
                 throw e;
-            } catch (Exception e) {
-                log.error("❌ Ошибка при опросе результата на попытке {}: {}",
-                        attempt, e.getMessage());
+
+            } catch (RuntimeException e) {
+                log.error("❌ Ошибка при опросе результата на попытке {}: {}", attempt, e.getMessage());
                 throw new RuntimeException("Ошибка получения результата", e);
+
+            } catch (Exception e) {
+                log.error("❌ Непредвиденная ошибка на попытке {}: {}", attempt, e.getMessage(), e);
+                throw new RuntimeException("Непредвиденная ошибка при получении результата", e);
             }
         }
 
-        log.error("❌ ПРЕВЫШЕНО ВРЕМЯ ОЖИДАНИЯ!");
-        log.error("Выполнено {} попыток за {} секунд", maxAttempts, maxAttempts * 2);
-        log.error("MessageId: {}", messageId);
-        log.error("");
-        log.error("ВОЗМОЖНЫЕ ПРИЧИНЫ:");
-        log.error("  1. Запрос обрабатывается слишком долго (много данных)");
-        log.error("  2. Проблема на стороне сервера МЧО");
-        log.error("  3. Неправильный формат запроса");
-        log.error("");
-        log.error("ЧТО ДЕЛАТЬ:");
-        log.error("  1. Проверьте сохраненные XML файлы (soap-request-*.xml и soap-response-*.xml)");
-        log.error("  2. Попробуйте запрос позже");
-        log.error("  3. Обратитесь в поддержку МЧО если проблема повторяется");
-
-        throw new RuntimeException("Превышено время ожидания результата (попыток: " +
-                maxAttempts + ", время: " + (maxAttempts * 2) + " сек)");
+        log.error("❌ Превышено время ожидания результата ({} сек)", maxAttempts * 2);
+        throw new RuntimeException("Timeout: результат не получен за " + (maxAttempts * 2) + " секунд");
     }
 }

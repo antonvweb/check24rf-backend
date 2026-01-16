@@ -5,42 +5,61 @@ import jakarta.xml.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * ✅ ИСПРАВЛЕНО: Используется правильный namespace из официальной Postman коллекции МЧО
+ *
+ * БЫЛО (неправильно):
+ * namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1"
+ *
+ * СТАЛО (правильно):
+ * namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0"
+ */
 @Data
 @XmlRootElement(name = "GetReceiptsTapeResponse",
-        namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1")
+        namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetReceiptsTapeResponse {
 
-    @XmlElement(name = "NextMarker")
+    @XmlElement(name = "NextMarker",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String nextMarker;
 
-    @XmlElement(name = "TotalExpectedRemainingPolls")
+    @XmlElement(name = "TotalExpectedRemainingPolls",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private Long totalExpectedRemainingPolls;
 
-    @XmlElementWrapper(name = "Receipts")
-    @XmlElement(name = "Receipt")
+    @XmlElementWrapper(name = "Receipts",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Receipt",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<Receipt> receipts;
 
     @Data
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class Receipt {
 
-        @XmlElement(name = "UserIdentifier")
+        @XmlElement(name = "UserIdentifier",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String userIdentifier;
 
-        @XmlElement(name = "Phone")
+        @XmlElement(name = "Phone",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String phone;
 
-        @XmlElement(name = "Email")
+        @XmlElement(name = "Email",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String email;
 
-        @XmlElement(name = "Json")
+        @XmlElement(name = "Json",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private byte[] json; // Base64 encoded JSON
 
-        @XmlElement(name = "ReceiveDate")
+        @XmlElement(name = "ReceiveDate",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private LocalDateTime receiveDate;
 
-        @XmlElement(name = "SourceCode")
+        @XmlElement(name = "SourceCode",
+                namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String sourceCode; // KKT_RECEIPT, SCAN_MPPCH, SCAN_LKDR, SCAN_PARTNER
     }
 }

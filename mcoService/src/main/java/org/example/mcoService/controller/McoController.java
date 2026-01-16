@@ -346,4 +346,125 @@ public class McoController {
                         "  GET /api/mco/health - Проверка работоспособности"
         );
     }
+
+    // ============================================
+// ДОБАВЬТЕ ЭТИ ЭНДПОИНТЫ В McoController.java
+// ============================================
+
+    /**
+     * ТЕСТ С МАРКЕРОМ S_FROM_BEGINNING
+     * GET http://localhost:8085/api/mco/test-receipts-from-beginning
+     */
+    @GetMapping("/test-receipts-from-beginning")
+    public ResponseEntity<String> testReceiptsFromBeginning() {
+        try {
+            log.info(">>> ТЕСТ С МАРКЕРОМ S_FROM_BEGINNING <<<");
+
+            GetReceiptsTapeResponse response = apiClient.getReceiptsSync("S_FROM_BEGINNING");
+
+            StringBuilder result = new StringBuilder();
+            result.append("✅ Запрос выполнен успешно!\n\n");
+
+            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
+                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
+
+                response.getReceipts().forEach(receipt -> {
+                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
+                            .append(", Дата: ").append(receipt.getReceiveDate())
+                            .append(", Источник: ").append(receipt.getSourceCode())
+                            .append("\n");
+                });
+
+                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
+                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
+            } else {
+                result.append("❌ Чеков не найдено\n");
+            }
+
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            log.error("Ошибка теста с S_FROM_BEGINNING", e);
+            return ResponseEntity.status(500)
+                    .body("❌ Ошибка: " + e.getMessage());
+        }
+    }
+
+    /**
+     * ТЕСТ БЕЗ МАРКЕРА (пустая строка)
+     * GET http://localhost:8085/api/mco/test-receipts-no-marker
+     */
+    @GetMapping("/test-receipts-no-marker")
+    public ResponseEntity<String> testReceiptsNoMarker() {
+        try {
+            log.info(">>> ТЕСТ БЕЗ МАРКЕРА (пустая строка) <<<");
+
+            GetReceiptsTapeResponse response = apiClient.getReceiptsSync("");
+
+            StringBuilder result = new StringBuilder();
+            result.append("✅ Запрос выполнен успешно!\n\n");
+
+            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
+                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
+
+                response.getReceipts().forEach(receipt -> {
+                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
+                            .append(", Дата: ").append(receipt.getReceiveDate())
+                            .append(", Источник: ").append(receipt.getSourceCode())
+                            .append("\n");
+                });
+
+                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
+                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
+            } else {
+                result.append("❌ Чеков не найдено\n");
+            }
+
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            log.error("Ошибка теста без маркера", e);
+            return ResponseEntity.status(500)
+                    .body("❌ Ошибка: " + e.getMessage());
+        }
+    }
+
+    /**
+     * ТЕСТ С NULL МАРКЕРОМ
+     * GET http://localhost:8085/api/mco/test-receipts-null-marker
+     */
+    @GetMapping("/test-receipts-null-marker")
+    public ResponseEntity<String> testReceiptsNullMarker() {
+        try {
+            log.info(">>> ТЕСТ С NULL МАРКЕРОМ <<<");
+
+            GetReceiptsTapeResponse response = apiClient.getReceiptsSync(null);
+
+            StringBuilder result = new StringBuilder();
+            result.append("✅ Запрос выполнен успешно!\n\n");
+
+            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
+                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
+
+                response.getReceipts().forEach(receipt -> {
+                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
+                            .append(", Дата: ").append(receipt.getReceiveDate())
+                            .append(", Источник: ").append(receipt.getSourceCode())
+                            .append("\n");
+                });
+
+                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
+                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
+            } else {
+                result.append("❌ Чеков не найдено\n");
+            }
+
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            log.error("Ошибка теста с null маркером", e);
+            return ResponseEntity.status(500)
+                    .body("❌ Ошибка: " + e.getMessage());
+        }
+    }
 }

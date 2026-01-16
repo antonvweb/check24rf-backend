@@ -3,7 +3,9 @@ package org.example.mcoService.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
+import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.dto.response.SendMessageResponse;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,87 @@ public class McoController {
 
     private final McoService mcoService;
     private final McoApiClient apiClient;
+
+    // ============================================
+// ДОБАВЬТЕ ЭТОТ ЭНДПОИНТ В McoController.java
+// ============================================
+
+    private final McoProperties mcoProperties; // Добавьте это поле если его нет
+
+    /**
+     * ДИАГНОСТИКА - Проверка конфигурации и подключения
+     * GET http://localhost:8085/api/mco/diagnose
+     */
+    @GetMapping("/diagnose")
+    public ResponseEntity<String> diagnose() {
+        StringBuilder result = new StringBuilder();
+
+        result.append("╔════════════════════════════════════════════════════╗\n");
+        result.append("║   🔍 ДИАГНОСТИКА ПОДКЛЮЧЕНИЯ К МЧО                ║\n");
+        result.append("╚════════════════════════════════════════════════════╝\n\n");
+
+        // 1. Проверка конфигурации
+        result.append("1️⃣ КОНФИГУРАЦИЯ:\n");
+        result.append("   • API URL: ").append(mcoProperties.getApi().getBaseUrl()).append("\n");
+        result.append("   • Partner INN: ").append(mcoProperties.getPartner().getInn()).append("\n");
+        result.append("   • Partner Name: ").append(mcoProperties.getPartner().getName()).append("\n");
+        result.append("   • Partner Type: ").append(mcoProperties.getPartner().getType()).append("\n");
+        result.append("   • Token: ").append(mcoProperties.getApi().getToken() != null ? "✅ Установлен" : "❌ НЕ установлен").append("\n");
+        result.append("   • UserToken: ").append(mcoProperties.getApi().getUserToken() != null ? "✅ Установлен" : "❌ НЕ установлен").append("\n\n");
+
+        // 2. Тест подключения
+        result.append("2️⃣ ТЕСТ ПОДКЛЮЧЕНИЯ:\n");
+        try {
+            // Попробуем отправить простой запрос
+            String testRequestId = "DIAG-" + System.currentTimeMillis();
+            SendMessageResponse response = apiClient.bindUser("79999999999", testRequestId);
+
+            result.append("   ✅ SOAP запросы работают\n");
+            result.append("   • MessageId получен: ").append(response.getMessageId()).append("\n\n");
+
+        } catch (Exception e) {
+            result.append("   ❌ ОШИБКА SOAP запроса:\n");
+            result.append("   • ").append(e.getMessage()).append("\n\n");
+        }
+
+        // 3. Что проверить
+        result.append("3️⃣ ЧТО НУЖНО ПРОВЕРИТЬ:\n\n");
+        result.append("   ❓ В ЛК МЧО (https://dr.stm-labs.ru/partners):\n");
+        result.append("      - Найдите свою учетную запись партнера\n");
+        result.append("      - Проверьте что INN совпадает: ").append(mcoProperties.getPartner().getInn()).append("\n");
+        result.append("      - Проверьте что есть подключенные пользователи со статусом APPROVED\n");
+        result.append("      - Проверьте что у этих пользователей есть чеки\n\n");
+
+        result.append("   ❓ Возможно вы:\n");
+        result.append("      - Зарегистрировали ДРУГОГО партнера через API?\n");
+        result.append("      - Подключились к ДРУГОМУ партнеру в ЛК?\n");
+        result.append("      - Используете старые токены?\n\n");
+
+        // 4. Следующие шаги
+        result.append("4️⃣ СЛЕДУЮЩИЕ ШАГИ:\n\n");
+        result.append("   Вариант А: Если партнер УЖЕ есть в ЛК:\n");
+        result.append("   1. Узнайте PartnerId этого партнера\n");
+        result.append("   2. Обновите конфигурацию с правильным PartnerId\n");
+        result.append("   3. Повторите тест\n\n");
+
+        result.append("   Вариант Б: Зарегистрировать НОВОГО партнера через API:\n");
+        result.append("   1. POST /api/mco/register?logoPath=/path/to/logo.jpg\n");
+        result.append("   2. Сохраните полученный PartnerId\n");
+        result.append("   3. Подключите пользователя: POST /api/mco/bind-user-test\n");
+        result.append("   4. Одобрите заявку в ЛК МЧО\n");
+        result.append("   5. Попросите пользователя отсканировать чек\n");
+        result.append("   6. Повторите тест через 2-3 минуты\n\n");
+
+        result.append("╔════════════════════════════════════════════════════╗\n");
+        result.append("║   💡 СОВЕТ                                         ║\n");
+        result.append("╚════════════════════════════════════════════════════╝\n\n");
+        result.append("Скорее всего проблема в том что:\n");
+        result.append("• Ваши токены и конфигурация для одного партнера\n");
+        result.append("• А в ЛК вы подключились к ДРУГОМУ партнеру\n");
+        result.append("• API не видит чеки потому что ищет у СВОЕГО партнера\n\n");
+
+        return ResponseEntity.ok(result.toString());
+    }
 
     // ==========================================
     // РЕГИСТРАЦИЯ И ПОДКЛЮЧЕНИЕ

@@ -9,7 +9,8 @@ import jakarta.xml.bind.annotation.*;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class GetMessageResponse {
 
-    @XmlElement(name = "Message")
+    @XmlElement(name = "Message",
+            namespace = "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0")
     private MessageContent message;
 
     @Data
@@ -20,6 +21,8 @@ public class GetMessageResponse {
         private Object content;
     }
 
-    @XmlElement(name = "ProcessingStatus")
+    // ← ВОТ ЗДЕСЬ БЫЛА ПРОБЛЕМА! Не было namespace!
+    @XmlElement(name = "ProcessingStatus",
+            namespace = "urn://x-artefacts-gnivc-ru/inplat/servin/OpenApiAsyncMessageConsumerService/types/1.0")
     private String processingStatus; // COMPLETED, PROCESSING, FAILED
 }

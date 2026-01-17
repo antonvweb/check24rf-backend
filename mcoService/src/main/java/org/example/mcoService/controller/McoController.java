@@ -24,11 +24,6 @@ public class McoController {
 
     private final McoService mcoService;
     private final McoProperties mcoProperties;
-
-    // ==========================================
-    // РЕГИСТРАЦИЯ И ПОДКЛЮЧЕНИЕ
-    // ==========================================
-
     /**
      * Регистрация партнера в системе МЧО
      * POST /api/mco/register?logoPath=/path/to/logo.jpg

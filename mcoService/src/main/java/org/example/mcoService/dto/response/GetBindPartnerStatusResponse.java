@@ -23,8 +23,7 @@ import java.util.List;
 public class GetBindPartnerStatusResponse {
 
     @JsonProperty("Statuses")
-    @XmlElementWrapper(name = "Statuses", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
-    @XmlElement(name = "BindPartnerStatus", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "Statuses", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<BindPartnerStatus> statuses;
 
     /**
@@ -35,7 +34,7 @@ public class GetBindPartnerStatusResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @XmlAccessorType(XmlAccessType.FIELD)
-    @XmlType(propOrder = {"requestId", "result", "userIdentifier", "rejectionReasonMessage"})
+    @XmlType(propOrder = {"requestId", "result", "userIdentifier", "permissionGroups", "responseTime", "rejectionReasonMessage"})
     public static class BindPartnerStatus {
 
         /**
@@ -63,6 +62,20 @@ public class GetBindPartnerStatusResponse {
         @JsonProperty("UserIdentifier")
         @XmlElement(name = "UserIdentifier", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String userIdentifier;
+
+        /**
+         * Группы разрешений
+         */
+        @JsonProperty("PermissionGroups")
+        @XmlElement(name = "PermissionGroups", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+        private String permissionGroups;
+
+        /**
+         * Время ответа пользователя
+         */
+        @JsonProperty("ResponseTime")
+        @XmlElement(name = "ResponseTime", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+        private String responseTime;
 
         /**
          * Сообщение пользователю с причиной отказа

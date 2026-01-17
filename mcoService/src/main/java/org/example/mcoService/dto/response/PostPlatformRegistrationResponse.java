@@ -10,9 +10,11 @@ import java.time.LocalDateTime;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PostPlatformRegistrationResponse {
 
-    @XmlElement(name = "Id")
+    @XmlElement(name = "Id",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private String id;
 
-    @XmlElement(name = "RegistrationDate")
+    @XmlElement(name = "RegistrationDate",
+            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private LocalDateTime registrationDate;
 }

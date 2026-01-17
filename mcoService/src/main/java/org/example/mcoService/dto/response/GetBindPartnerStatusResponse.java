@@ -17,14 +17,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "GetBindPartnerStatusResponse", namespace = "http://kvv.su/dr/types")
+@XmlRootElement(name = "GetBindPartnerStatusResponse", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(propOrder = {"statuses"})
 public class GetBindPartnerStatusResponse {
 
     @JsonProperty("Statuses")
-    @XmlElementWrapper(name = "Statuses", namespace = "http://kvv.su/dr/types")
-    @XmlElement(name = "BindPartnerStatus", namespace = "http://kvv.su/dr/types")
+    @XmlElementWrapper(name = "Statuses", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "BindPartnerStatus", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<BindPartnerStatus> statuses;
 
     /**
@@ -42,7 +42,7 @@ public class GetBindPartnerStatusResponse {
          * Идентификатор заявки
          */
         @JsonProperty("RequestId")
-        @XmlElement(name = "RequestId", namespace = "http://kvv.su/dr/types")
+        @XmlElement(name = "RequestId", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String requestId;
 
         /**
@@ -53,7 +53,7 @@ public class GetBindPartnerStatusResponse {
          * - REQUEST_EXPIRED - истекла
          */
         @JsonProperty("Result")
-        @XmlElement(name = "Result", namespace = "http://kvv.su/dr/types")
+        @XmlElement(name = "Result", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String result;
 
         /**
@@ -61,7 +61,7 @@ public class GetBindPartnerStatusResponse {
          * Формат: 79998887766
          */
         @JsonProperty("UserIdentifier")
-        @XmlElement(name = "UserIdentifier", namespace = "http://kvv.su/dr/types")
+        @XmlElement(name = "UserIdentifier", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String userIdentifier;
 
         /**
@@ -69,7 +69,7 @@ public class GetBindPartnerStatusResponse {
          * Присутствует только если result = REQUEST_REJECTED
          */
         @JsonProperty("RejectionReasonMessage")
-        @XmlElement(name = "RejectionReasonMessage", namespace = "http://kvv.su/dr/types")
+        @XmlElement(name = "RejectionReasonMessage", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
         private String rejectionReasonMessage;
     }
 }

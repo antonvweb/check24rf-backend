@@ -17,7 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "GetBindPartnerStatusRequest", namespace = "http://kvv.su/dr/types")
+@XmlRootElement(name = "GetBindPartnerStatusRequest", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(propOrder = {"requestIds"})
 public class GetBindPartnerStatusRequest {
@@ -27,7 +27,7 @@ public class GetBindPartnerStatusRequest {
      * Не более 50 идентификаторов
      */
     @JsonProperty("RequestIds")
-    @XmlElementWrapper(name = "RequestIds", namespace = "http://kvv.su/dr/types")
-    @XmlElement(name = "string", namespace = "http://kvv.su/dr/types")
+    @XmlElementWrapper(name = "RequestIds", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "string", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<String> requestIds;
 }

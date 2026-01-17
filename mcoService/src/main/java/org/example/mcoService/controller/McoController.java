@@ -2,16 +2,19 @@ package org.example.mcoService.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.api.ApiResponse;
+import org.example.mcoService.dto.api.BindRequestStatusDto;
+import org.example.mcoService.dto.api.CreateBindRequestDto;
+import org.example.mcoService.dto.api.ReceiptsResponseDto;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
-import org.example.mcoService.dto.response.SendMessageResponse;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -20,88 +23,7 @@ import java.util.List;
 public class McoController {
 
     private final McoService mcoService;
-    private final McoApiClient apiClient;
-
-    // ============================================
-// ДОБАВЬТЕ ЭТОТ ЭНДПОИНТ В McoController.java
-// ============================================
-
-    private final McoProperties mcoProperties; // Добавьте это поле если его нет
-
-    /**
-     * ДИАГНОСТИКА - Проверка конфигурации и подключения
-     * GET http://localhost:8085/api/mco/diagnose
-     */
-    @GetMapping("/diagnose")
-    public ResponseEntity<String> diagnose() {
-        StringBuilder result = new StringBuilder();
-
-        result.append("╔════════════════════════════════════════════════════╗\n");
-        result.append("║   🔍 ДИАГНОСТИКА ПОДКЛЮЧЕНИЯ К МЧО                ║\n");
-        result.append("╚════════════════════════════════════════════════════╝\n\n");
-
-        // 1. Проверка конфигурации
-        result.append("1️⃣ КОНФИГУРАЦИЯ:\n");
-        result.append("   • API URL: ").append(mcoProperties.getApi().getBaseUrl()).append("\n");
-        result.append("   • Partner INN: ").append(mcoProperties.getPartner().getInn()).append("\n");
-        result.append("   • Partner Name: ").append(mcoProperties.getPartner().getName()).append("\n");
-        result.append("   • Partner Type: ").append(mcoProperties.getPartner().getType()).append("\n");
-        result.append("   • Token: ").append(mcoProperties.getApi().getToken() != null ? "✅ Установлен" : "❌ НЕ установлен").append("\n");
-        result.append("   • UserToken: ").append(mcoProperties.getApi().getUserToken() != null ? "✅ Установлен" : "❌ НЕ установлен").append("\n\n");
-
-        // 2. Тест подключения
-        result.append("2️⃣ ТЕСТ ПОДКЛЮЧЕНИЯ:\n");
-        try {
-            // Попробуем отправить простой запрос
-            String testRequestId = "DIAG-" + System.currentTimeMillis();
-            SendMessageResponse response = apiClient.bindUser("79999999999", testRequestId);
-
-            result.append("   ✅ SOAP запросы работают\n");
-            result.append("   • MessageId получен: ").append(response.getMessageId()).append("\n\n");
-
-        } catch (Exception e) {
-            result.append("   ❌ ОШИБКА SOAP запроса:\n");
-            result.append("   • ").append(e.getMessage()).append("\n\n");
-        }
-
-        // 3. Что проверить
-        result.append("3️⃣ ЧТО НУЖНО ПРОВЕРИТЬ:\n\n");
-        result.append("   ❓ В ЛК МЧО (https://dr.stm-labs.ru/partners):\n");
-        result.append("      - Найдите свою учетную запись партнера\n");
-        result.append("      - Проверьте что INN совпадает: ").append(mcoProperties.getPartner().getInn()).append("\n");
-        result.append("      - Проверьте что есть подключенные пользователи со статусом APPROVED\n");
-        result.append("      - Проверьте что у этих пользователей есть чеки\n\n");
-
-        result.append("   ❓ Возможно вы:\n");
-        result.append("      - Зарегистрировали ДРУГОГО партнера через API?\n");
-        result.append("      - Подключились к ДРУГОМУ партнеру в ЛК?\n");
-        result.append("      - Используете старые токены?\n\n");
-
-        // 4. Следующие шаги
-        result.append("4️⃣ СЛЕДУЮЩИЕ ШАГИ:\n\n");
-        result.append("   Вариант А: Если партнер УЖЕ есть в ЛК:\n");
-        result.append("   1. Узнайте PartnerId этого партнера\n");
-        result.append("   2. Обновите конфигурацию с правильным PartnerId\n");
-        result.append("   3. Повторите тест\n\n");
-
-        result.append("   Вариант Б: Зарегистрировать НОВОГО партнера через API:\n");
-        result.append("   1. POST /api/mco/register?logoPath=/path/to/logo.jpg\n");
-        result.append("   2. Сохраните полученный PartnerId\n");
-        result.append("   3. Подключите пользователя: POST /api/mco/bind-user-test\n");
-        result.append("   4. Одобрите заявку в ЛК МЧО\n");
-        result.append("   5. Попросите пользователя отсканировать чек\n");
-        result.append("   6. Повторите тест через 2-3 минуты\n\n");
-
-        result.append("╔════════════════════════════════════════════════════╗\n");
-        result.append("║   💡 СОВЕТ                                         ║\n");
-        result.append("╚════════════════════════════════════════════════════╝\n\n");
-        result.append("Скорее всего проблема в том что:\n");
-        result.append("• Ваши токены и конфигурация для одного партнера\n");
-        result.append("• А в ЛК вы подключились к ДРУГОМУ партнеру\n");
-        result.append("• API не видит чеки потому что ищет у СВОЕГО партнера\n\n");
-
-        return ResponseEntity.ok(result.toString());
-    }
+    private final McoProperties mcoProperties;
 
     // ==========================================
     // РЕГИСТРАЦИЯ И ПОДКЛЮЧЕНИЕ
@@ -109,233 +31,299 @@ public class McoController {
 
     /**
      * Регистрация партнера в системе МЧО
-     * POST http://localhost:8085/api/mco/register?logoPath=/path/to/logo.jpg
+     * POST /api/mco/register?logoPath=/path/to/logo.jpg
      */
     @PostMapping("/register")
-    public ResponseEntity<String> registerPartner(@RequestParam String logoPath) {
+    public ResponseEntity<ApiResponse<Object>> registerPartner(
+            @RequestParam(required = false) String logoPath) {
+
         try {
+            log.info("Регистрация партнера в МЧО");
             String partnerId = mcoService.initializePartner(logoPath);
-            return ResponseEntity.ok(
-                    "✅ Партнер успешно зарегистрирован!\n" +
-                            "ID партнера: " + partnerId + "\n\n" +
-                            "Проверьте в ЛК МЧО: https://dr.stm-labs.ru/partners"
-            );
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Партнер успешно зарегистрирован в системе МЧО. ID: " + partnerId,
+                    null
+            ));
+
         } catch (Exception e) {
             log.error("Ошибка регистрации партнера", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка регистрации: " + e.getMessage());
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка регистрации партнера: " + e.getMessage())
+            );
         }
     }
 
     /**
-     * Подключение пользователя (с указанием номера)
-     * POST http://localhost:8085/api/mco/bind-user?phone=79999999999
+     * Подключение пользователя к партнеру
+     * POST /api/mco/bind-user?phone=79999999999&permissionGroups=DEFAULT
      */
     @PostMapping("/bind-user")
-    public ResponseEntity<String> bindUser(@RequestParam String phone) {
+    public ResponseEntity<ApiResponse<CreateBindRequestDto>> bindUser(
+            @RequestParam String phone,
+            @RequestParam(required = false, defaultValue = "DEFAULT") String permissionGroups) {
+
         try {
+            log.info("Подключение пользователя: {}", phone);
+
             String requestId = mcoService.connectUser(phone);
-            return ResponseEntity.ok(
-                    "✅ Заявка на подключение отправлена!\n\n" +
-                            "📋 ВАЖНО - Сохраните RequestId:\n" +
-                            "RequestId: " + requestId + "\n\n" +
-                            "🔍 Проверить статус заявки:\n" +
-                            "GET /api/mco/bind-request-status?requestId=" + requestId + "\n\n" +
-                            "⚠️ СЛЕДУЮЩИЕ ШАГИ:\n" +
-                            "1. Пользователь должен одобрить заявку в ЛК МЧО:\n" +
-                            "   https://dr.stm-labs.ru/\n" +
-                            "2. Проверьте статус через несколько минут\n" +
-                            "3. Статус REQUEST_APPROVED = успешно подключен!"
-            );
+
+            CreateBindRequestDto data = CreateBindRequestDto.builder()
+                    .requestId(requestId)
+                    .userIdentifier(phone)
+                    .permissionGroups(permissionGroups)
+                    .statusCheckUrl("/api/mco/bind-request-status?requestId=" + requestId)
+                    .userInstruction("Пользователю отправлена заявка в ЛК МЧО. " +
+                            "Для активации подключения пользователь должен одобрить заявку на сайте https://dr.stm-labs.ru/")
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Заявка на подключение создана успешно",
+                    data
+            ));
+
         } catch (Exception e) {
             log.error("Ошибка подключения пользователя", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка подключения: " + e.getMessage());
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка подключения пользователя: " + e.getMessage())
+            );
         }
     }
 
     /**
      * Подключение тестового пользователя (фиксированный номер)
-     * POST http://localhost:8085/api/mco/bind-user-test
+     * POST /api/mco/bind-user-test
      */
     @PostMapping("/bind-user-test")
-    public ResponseEntity<String> bindUserTest() {
+    public ResponseEntity<ApiResponse<CreateBindRequestDto>> bindUserTest() {
         String testPhone = "79054455906";
+        return bindUser(testPhone, "DEFAULT");
+    }
+
+    // ==========================================
+    // СТАТУСЫ ЗАЯВОК
+    // ==========================================
+
+    /**
+     * Проверка статуса одной заявки
+     * GET /api/mco/bind-request-status?requestId=YOUR_REQUEST_ID
+     */
+    @GetMapping("/bind-request-status")
+    public ResponseEntity<ApiResponse<BindRequestStatusDto>> getBindRequestStatus(
+            @RequestParam String requestId) {
 
         try {
-            String requestId = mcoService.connectUser(testPhone);
-            return ResponseEntity.ok(
-                    "✅ Тестовая заявка на подключение отправлена!\n\n" +
-                            "📋 СОХРАНИТЕ RequestId:\n" +
-                            "RequestId: " + requestId + "\n" +
-                            "Телефон: " + testPhone + "\n\n" +
-                            "🔍 ПРОВЕРИТЬ СТАТУС:\n" +
-                            "GET /api/mco/bind-request-status?requestId=" + requestId + "\n\n" +
-                            "📝 СЛЕДУЮЩИЕ ШАГИ:\n" +
-                            "1. Зайдите в ЛК МЧО: https://dr.stm-labs.ru/partners\n" +
-                            "2. Найдите заявку от пользователя " + testPhone + "\n" +
-                            "3. Одобрите заявку\n" +
-                            "4. Проверьте статус через эндпоинт выше\n" +
-                            "5. Когда статус станет REQUEST_APPROVED:\n" +
-                            "   - Попросите пользователя отсканировать чек в приложении МЧО\n" +
-                            "   - Тестируйте получение чеков: GET /api/mco/test-receipts\n\n" +
-                            "💡 ВОЗМОЖНЫЕ СТАТУСЫ:\n" +
-                            "• WAIT - ожидает одобрения пользователем\n" +
-                            "• REQUEST_APPROVED - одобрена, можно получать чеки\n" +
-                            "• REQUEST_REJECTED - отклонена\n" +
-                            "• REQUEST_EXPIRED - заявка устарела"
+            log.info("Проверка статуса заявки: {}", requestId);
+
+            GetBindPartnerStatusResponse.BindPartnerStatus status =
+                    mcoService.checkBindRequestStatus(requestId);
+
+            BindRequestStatusDto data = BindRequestStatusDto.fromMcoResponse(status);
+
+            return ResponseEntity.ok(ApiResponse.success(data));
+
+        } catch (RuntimeException e) {
+            log.warn("Статус не найден для заявки: {}", requestId);
+
+            // Если статус не найден - возможно заявка еще не обработана
+            if (e.getMessage().contains("Не получен статус")) {
+                return ResponseEntity.ok(ApiResponse.success(
+                        "Заявка еще не обработана пользователем",
+                        BindRequestStatusDto.builder()
+                                .requestId(requestId)
+                                .status("PENDING")
+                                .statusDescription("Заявка отправлена, ожидает обработки пользователем")
+                                .build()
+                ));
+            }
+
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка проверки статуса: " + e.getMessage())
             );
-        } catch (Exception e) {
-            log.error("Ошибка подключения тестового пользователя", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка подключения: " + e.getMessage());
         }
     }
 
+    /**
+     * Проверка статусов нескольких заявок
+     * POST /api/mco/bind-requests-status
+     * Body (JSON): ["REQUEST_ID_1", "REQUEST_ID_2", "REQUEST_ID_3"]
+     */
+    @PostMapping("/bind-requests-status")
+    public ResponseEntity<ApiResponse<List<BindRequestStatusDto>>> getBindRequestsStatus(
+            @RequestBody List<String> requestIds) {
+
+        try {
+            log.info("Проверка статусов заявок, количество: {}", requestIds.size());
+
+            if (requestIds.size() > 50) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Максимум 50 requestIds за один запрос")
+                );
+            }
+
+            List<GetBindPartnerStatusResponse.BindPartnerStatus> statuses =
+                    mcoService.checkBindRequestStatuses(requestIds);
+
+            List<BindRequestStatusDto> data = statuses.stream()
+                    .map(BindRequestStatusDto::fromMcoResponse)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success(data));
+
+        } catch (Exception e) {
+            log.error("Ошибка проверки статусов заявок", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка проверки статусов: " + e.getMessage())
+            );
+        }
+    }
 
     // ==========================================
     // РАБОТА С ЧЕКАМИ
     // ==========================================
 
     /**
-     * ТЕСТОВЫЙ ЭНДПОИНТ - Получение одной порции чеков для демонстрации
-     * GET http://localhost:8085/api/mco/test-receipts
+     * Тестовое получение чеков (одна порция)
+     * GET /api/mco/receipts/test
      */
-    @GetMapping("/test-receipts")
-    public ResponseEntity<String> testReceipts() {
+    @GetMapping("/receipts/test")
+    public ResponseEntity<ApiResponse<ReceiptsResponseDto>> testReceipts() {
         try {
             log.info(">>> ЗАПУСК ТЕСТОВОГО ПОЛУЧЕНИЯ ЧЕКОВ <<<");
 
             int receiptsCount = mcoService.testReceiptsOnce();
 
             if (receiptsCount == 0) {
-                return ResponseEntity.ok(
-                        "⚠️ Чеков не найдено!\n\n" +
-                                "ВОЗМОЖНЫЕ ПРИЧИНЫ:\n" +
-                                "1. Нет подключенных пользователей\n" +
-                                "2. Пользователи не сканировали чеки\n" +
-                                "3. Прошло больше 5 дней с момента сканирования\n\n" +
-                                "ЧТО ДЕЛАТЬ:\n" +
-                                "1. Подключите пользователя: POST /bind-user-test\n" +
-                                "2. Одобрите заявку в ЛК: https://dr.stm-labs.ru/partners\n" +
-                                "3. Отсканируйте чек в приложении МЧО\n" +
-                                "4. Подождите 2-3 минуты и повторите запрос\n\n" +
-                                "📋 Смотрите подробные логи в консоли приложения!"
-                );
+                return ResponseEntity.ok(ApiResponse.success(
+                        "Чеков не найдено. Убедитесь что пользователь подключен и отсканировал чеки в приложении МЧО.",
+                        ReceiptsResponseDto.builder()
+                                .totalCount(0)
+                                .receipts(List.of())
+                                .info("Нет подключенных пользователей или нет отсканированных чеков")
+                                .build()
+                ));
             }
 
-            return ResponseEntity.ok(
-                    "✅ УСПЕШНО!\n\n" +
-                            "Получено чеков: " + receiptsCount + "\n\n" +
-                            "📋 Смотрите подробную информацию в логах!\n" +
-                            "💡 Для полной синхронизации используйте GET /sync-receipts"
-            );
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Чеки успешно получены. Подробности в логах.",
+                    ReceiptsResponseDto.builder()
+                            .totalCount(receiptsCount)
+                            .info("Для получения детальной информации смотрите логи приложения")
+                            .build()
+            ));
 
         } catch (Exception e) {
             log.error("Ошибка тестирования получения чеков", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage() + "\n\n" +
-                            "📋 Смотрите подробности в логах!");
-        }
-    }
-
-    /**
-     * ДЕТАЛЬНЫЙ ТЕСТ - Получение чеков с полным выводом всей информации
-     * GET http://localhost:8085/api/mco/test-receipts-detailed
-     */
-    @GetMapping("/test-receipts-detailed")
-    public ResponseEntity<String> testReceiptsDetailed() {
-        try {
-            mcoService.detailedReceiptsTest();
-            return ResponseEntity.ok(
-                    "✅ Детальный тест завершен!\n\n" +
-                            "📋 Вся информация выведена в логах.\n" +
-                            "Смотрите консоль приложения для полных деталей."
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка получения чеков: " + e.getMessage())
             );
-        } catch (Exception e) {
-            log.error("Ошибка детального теста", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
         }
     }
 
     /**
-     * ПОЛНАЯ СИНХРОНИЗАЦИЯ - Получение всех доступных чеков с пагинацией
-     * GET http://localhost:8085/api/mco/sync-receipts
+     * Получение чеков по маркеру
+     * GET /api/mco/receipts?marker=S_FROM_END
      */
-    @GetMapping("/sync-receipts")
-    public ResponseEntity<String> syncReceipts() {
+    @GetMapping("/receipts")
+    public ResponseEntity<ApiResponse<ReceiptsResponseDto>> getReceiptsByMarker(
+            @RequestParam(defaultValue = "S_FROM_END") String marker) {
+
+        try {
+            GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker(marker);
+
+            List<ReceiptsResponseDto.ReceiptDto> receipts = null;
+            if (response.getReceipts() != null) {
+                receipts = response.getReceipts().stream()
+                        .map(r -> ReceiptsResponseDto.ReceiptDto.builder()
+                                .userIdentifier(r.getUserIdentifier())
+                                .receiveDate(r.getReceiveDate())
+                                .sourceCode(r.getSourceCode())
+                                .phone(r.getPhone())
+                                .email(r.getEmail())
+                                .json(r.getJson())
+                                .build())
+                        .collect(Collectors.toList());
+            }
+
+            ReceiptsResponseDto data = ReceiptsResponseDto.builder()
+                    .receipts(receipts != null ? receipts : List.of())
+                    .totalCount(receipts != null ? receipts.size() : 0)
+                    .nextMarker(response.getNextMarker())
+                    .remainingPolls(response.getTotalExpectedRemainingPolls())
+                    .build();
+
+            String message = receipts != null && !receipts.isEmpty()
+                    ? "Получена порция чеков"
+                    : "В этой порции чеков нет";
+
+            return ResponseEntity.ok(ApiResponse.success(message, data));
+
+        } catch (Exception e) {
+            log.error("Ошибка получения чеков по маркеру: {}", marker, e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка получения чеков: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Полная синхронизация чеков
+     * GET /api/mco/receipts/sync
+     */
+    @GetMapping("/receipts/sync")
+    public ResponseEntity<ApiResponse<Object>> syncReceipts() {
         try {
             log.info(">>> ЗАПУСК ПОЛНОЙ СИНХРОНИЗАЦИИ ЧЕКОВ <<<");
 
             mcoService.syncReceipts();
 
-            return ResponseEntity.ok(
-                    "✅ Полная синхронизация завершена!\n\n" +
-                            "📋 Все чеки обработаны.\n" +
-                            "Смотрите подробности в логах приложения."
-            );
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Полная синхронизация завершена успешно. Подробности в логах.",
+                    null
+            ));
 
         } catch (Exception e) {
             log.error("Ошибка синхронизации чеков", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка синхронизации: " + e.getMessage());
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка синхронизации: " + e.getMessage())
+            );
         }
     }
 
     /**
-     * СТАТИСТИКА - Получение информации о доступных чеках
-     * GET http://localhost:8085/api/mco/receipts-stats
+     * Детальный тест получения чеков
+     * GET /api/mco/receipts/test-detailed
      */
-    @GetMapping("/receipts-stats")
-    public ResponseEntity<String> getReceiptsStats() {
+    @GetMapping("/receipts/test-detailed")
+    public ResponseEntity<ApiResponse<Object>> testReceiptsDetailed() {
+        try {
+            mcoService.detailedReceiptsTest();
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Детальный тест завершен. Смотрите логи для подробностей.",
+                    null
+            ));
+        } catch (Exception e) {
+            log.error("Ошибка детального теста", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка детального теста: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Получение статистики по чекам
+     * GET /api/mco/receipts/stats
+     */
+    @GetMapping("/receipts/stats")
+    public ResponseEntity<ApiResponse<Object>> getReceiptsStats() {
         try {
             String stats = mcoService.getReceiptsStats();
-            return ResponseEntity.ok(stats);
+            return ResponseEntity.ok(ApiResponse.success(stats, null));
         } catch (Exception e) {
             log.error("Ошибка получения статистики", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
-        }
-    }
-
-    /**
-     * ПОЛУЧЕНИЕ ПО МАРКЕРУ - Получение конкретной порции чеков
-     * GET http://localhost:8085/api/mco/receipts?marker=S_FROM_END
-     */
-    @GetMapping("/receipts")
-    public ResponseEntity<?> getReceiptsByMarker(
-            @RequestParam(defaultValue = "S_FROM_END") String marker) {
-        try {
-            GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker(marker);
-
-            // Формируем читаемый ответ
-            StringBuilder result = new StringBuilder();
-            result.append("✅ Получена порция чеков\n\n");
-
-            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
-                result.append("Количество чеков: ").append(response.getReceipts().size()).append("\n\n");
-
-                result.append("Чеки:\n");
-                response.getReceipts().forEach(receipt -> {
-                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
-                            .append(", Дата: ").append(receipt.getReceiveDate())
-                            .append(", Источник: ").append(receipt.getSourceCode())
-                            .append("\n");
-                });
-            } else {
-                result.append("Чеков в этой порции нет.\n");
-            }
-
-            result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
-            result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
-
-            return ResponseEntity.ok(result.toString());
-
-        } catch (Exception e) {
-            log.error("Ошибка получения чеков по маркеру", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка получения статистики: " + e.getMessage())
+            );
         }
     }
 
@@ -344,300 +332,44 @@ public class McoController {
     // ==========================================
 
     /**
-     * Проверка работоспособности сервиса
-     * GET http://localhost:8085/api/mco/health
+     * Health check
+     * GET /api/mco/health
      */
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok(
-                "✅ МЧО Сервис работает!\n\n" +
-                        "Доступные эндпоинты:\n" +
-                        "📝 Регистрация и подключение:\n" +
-                        "  POST /api/mco/register?logoPath=... - Регистрация партнера\n" +
-                        "  POST /api/mco/bind-user?phone=... - Подключение пользователя\n" +
-                        "  POST /api/mco/bind-user-test - Подключение тестового пользователя\n\n" +
-                        "📋 Работа с чеками:\n" +
-                        "  GET /api/mco/test-receipts - Тестовое получение чеков\n" +
-                        "  GET /api/mco/test-receipts-detailed - Детальный тест\n" +
-                        "  GET /api/mco/sync-receipts - Полная синхронизация\n" +
-                        "  GET /api/mco/receipts-stats - Статистика по чекам\n" +
-                        "  GET /api/mco/receipts?marker=... - Получение по маркеру\n\n" +
-                        "🔧 Служебные:\n" +
-                        "  GET /api/mco/health - Проверка работоспособности"
-        );
+    public ResponseEntity<ApiResponse<Object>> health() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "МЧО Сервис работает корректно",
+                null
+        ));
     }
 
-    // ============================================
-// ДОБАВЬТЕ ЭТИ ЭНДПОИНТЫ В McoController.java
-// ============================================
-
     /**
-     * ТЕСТ С МАРКЕРОМ S_FROM_BEGINNING
-     * GET http://localhost:8085/api/mco/test-receipts-from-beginning
+     * Диагностика подключения
+     * GET /api/mco/diagnose
      */
-    @GetMapping("/test-receipts-from-beginning")
-    public ResponseEntity<String> testReceiptsFromBeginning() {
+    @GetMapping("/diagnose")
+    public ResponseEntity<ApiResponse<Object>> diagnose() {
         try {
-            log.info(">>> ТЕСТ С МАРКЕРОМ S_FROM_BEGINNING <<<");
+            boolean tokenPresent = mcoProperties.getApi().getToken() != null;
+            boolean userTokenPresent = mcoProperties.getApi().getUserToken() != null;
 
-            GetReceiptsTapeResponse response = apiClient.getReceiptsSync("S_FROM_BEGINNING");
-
-            StringBuilder result = new StringBuilder();
-            result.append("✅ Запрос выполнен успешно!\n\n");
-
-            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
-                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
-
-                response.getReceipts().forEach(receipt -> {
-                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
-                            .append(", Дата: ").append(receipt.getReceiveDate())
-                            .append(", Источник: ").append(receipt.getSourceCode())
-                            .append("\n");
-                });
-
-                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
-                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
-            } else {
-                result.append("❌ Чеков не найдено\n");
+            if (!tokenPresent || !userTokenPresent) {
+                return ResponseEntity.ok(ApiResponse.error(
+                        "Токены не настроены",
+                        "MISSING_TOKENS",
+                        "Token present: " + tokenPresent + ", UserToken present: " + userTokenPresent
+                ));
             }
 
-            return ResponseEntity.ok(result.toString());
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Конфигурация корректна. API URL: " + mcoProperties.getApi().getBaseUrl(),
+                    null
+            ));
 
         } catch (Exception e) {
-            log.error("Ошибка теста с S_FROM_BEGINNING", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка диагностики: " + e.getMessage())
+            );
         }
-    }
-
-    /**
-     * ТЕСТ БЕЗ МАРКЕРА (пустая строка)
-     * GET http://localhost:8085/api/mco/test-receipts-no-marker
-     */
-    @GetMapping("/test-receipts-no-marker")
-    public ResponseEntity<String> testReceiptsNoMarker() {
-        try {
-            log.info(">>> ТЕСТ БЕЗ МАРКЕРА (пустая строка) <<<");
-
-            GetReceiptsTapeResponse response = apiClient.getReceiptsSync("");
-
-            StringBuilder result = new StringBuilder();
-            result.append("✅ Запрос выполнен успешно!\n\n");
-
-            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
-                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
-
-                response.getReceipts().forEach(receipt -> {
-                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
-                            .append(", Дата: ").append(receipt.getReceiveDate())
-                            .append(", Источник: ").append(receipt.getSourceCode())
-                            .append("\n");
-                });
-
-                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
-                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
-            } else {
-                result.append("❌ Чеков не найдено\n");
-            }
-
-            return ResponseEntity.ok(result.toString());
-
-        } catch (Exception e) {
-            log.error("Ошибка теста без маркера", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
-        }
-    }
-
-    /**
-     * ТЕСТ С NULL МАРКЕРОМ
-     * GET http://localhost:8085/api/mco/test-receipts-null-marker
-     */
-    @GetMapping("/test-receipts-null-marker")
-    public ResponseEntity<String> testReceiptsNullMarker() {
-        try {
-            log.info(">>> ТЕСТ С NULL МАРКЕРОМ <<<");
-
-            GetReceiptsTapeResponse response = apiClient.getReceiptsSync(null);
-
-            StringBuilder result = new StringBuilder();
-            result.append("✅ Запрос выполнен успешно!\n\n");
-
-            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
-                result.append("📋 Получено чеков: ").append(response.getReceipts().size()).append("\n\n");
-
-                response.getReceipts().forEach(receipt -> {
-                    result.append("  - Пользователь: ").append(receipt.getUserIdentifier())
-                            .append(", Дата: ").append(receipt.getReceiveDate())
-                            .append(", Источник: ").append(receipt.getSourceCode())
-                            .append("\n");
-                });
-
-                result.append("\nNextMarker: ").append(response.getNextMarker()).append("\n");
-                result.append("Осталось порций: ").append(response.getTotalExpectedRemainingPolls()).append("\n");
-            } else {
-                result.append("❌ Чеков не найдено\n");
-            }
-
-            return ResponseEntity.ok(result.toString());
-
-        } catch (Exception e) {
-            log.error("Ошибка теста с null маркером", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
-        }
-    }
-
-    // ============================================
-// ЭНДПОИНТЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
-// Добавить эти методы в класс McoController
-// ============================================
-
-    /**
-     * Проверка статуса одной заявки
-     * GET http://localhost:8085/api/mco/bind-request-status?requestId=YOUR_REQUEST_ID
-     */
-    @GetMapping("/bind-request-status")
-    public ResponseEntity<String> getBindRequestStatus(@RequestParam String requestId) {
-        try {
-            log.info("Проверка статуса заявки: {}", requestId);
-
-            GetBindPartnerStatusResponse.BindPartnerStatus status =
-                    mcoService.checkBindRequestStatus(requestId);
-
-            StringBuilder result = new StringBuilder();
-            result.append("╔════════════════════════════════════════════════════╗\n");
-            result.append("║   📋 СТАТУС ЗАЯВКИ НА ПОДКЛЮЧЕНИЕ                 ║\n");
-            result.append("╚════════════════════════════════════════════════════╝\n\n");
-
-            result.append("RequestId: ").append(status.getRequestId()).append("\n");
-            result.append("Пользователь: ").append(status.getUserIdentifier()).append("\n");
-            result.append("Статус: ");
-
-            switch (status.getResult()) {
-                case "WAIT":
-                    result.append("⏳ ОЖИДАЕТ ОБРАБОТКИ\n");
-                    result.append("\nПользователь еще не одобрил заявку в ЛК МЧО.\n");
-                    result.append("Попросите пользователя зайти на https://dr.stm-labs.ru/");
-                    break;
-
-                case "REQUEST_APPROVED":
-                    result.append("✅ ОДОБРЕНА\n");
-                    result.append("\nПользователь успешно подключен к партнеру!\n");
-                    result.append("Теперь вы можете получать его чеки через GetReceiptsTape.");
-                    break;
-
-                case "REQUEST_REJECTED":
-                    result.append("❌ ОТКЛОНЕНА\n");
-                    if (status.getRejectionReasonMessage() != null) {
-                        result.append("\nПричина отказа: ").append(status.getRejectionReasonMessage());
-                    }
-                    break;
-
-                case "REQUEST_EXPIRED":
-                    result.append("⌛ ИСТЕКЛА\n");
-                    result.append("\nЗаявка устарела. Нужно отправить новую заявку.");
-                    break;
-
-                default:
-                    result.append("❓ НЕИЗВЕСТНЫЙ СТАТУС: ").append(status.getResult());
-            }
-
-            return ResponseEntity.ok(result.toString());
-
-        } catch (Exception e) {
-            log.error("Ошибка проверки статуса заявки", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Проверка статусов нескольких заявок
-     * POST http://localhost:8085/api/mco/bind-requests-status
-     * Body (JSON): ["REQUEST_ID_1", "REQUEST_ID_2", "REQUEST_ID_3"]
-     */
-    @PostMapping("/bind-requests-status")
-    public ResponseEntity<String> getBindRequestsStatus(@RequestBody List<String> requestIds) {
-        try {
-            log.info("Проверка статусов заявок, количество: {}", requestIds.size());
-
-            if (requestIds.size() > 50) {
-                return ResponseEntity.badRequest()
-                        .body("❌ Максимум 50 requestIds за один запрос");
-            }
-
-            List<GetBindPartnerStatusResponse.BindPartnerStatus> statuses =
-                    mcoService.checkBindRequestStatuses(requestIds);
-
-            StringBuilder result = new StringBuilder();
-            result.append("╔════════════════════════════════════════════════════╗\n");
-            result.append("║   📋 СТАТУСЫ ЗАЯВОК НА ПОДКЛЮЧЕНИЕ                ║\n");
-            result.append("╚════════════════════════════════════════════════════╝\n\n");
-
-            result.append("Всего заявок: ").append(statuses.size()).append("\n\n");
-
-            // Группируем по статусам
-            long approved = statuses.stream()
-                    .filter(s -> "REQUEST_APPROVED".equals(s.getResult())).count();
-            long waiting = statuses.stream()
-                    .filter(s -> "WAIT".equals(s.getResult())).count();
-            long rejected = statuses.stream()
-                    .filter(s -> "REQUEST_REJECTED".equals(s.getResult())).count();
-            long expired = statuses.stream()
-                    .filter(s -> "REQUEST_EXPIRED".equals(s.getResult())).count();
-
-            result.append("СВОДКА:\n");
-            result.append("✅ Одобрено: ").append(approved).append("\n");
-            result.append("⏳ Ожидает: ").append(waiting).append("\n");
-            result.append("❌ Отклонено: ").append(rejected).append("\n");
-            result.append("⌛ Истекло: ").append(expired).append("\n\n");
-
-            result.append("ДЕТАЛИ:\n");
-            statuses.forEach(status -> {
-                String statusIcon = switch (status.getResult()) {
-                    case "REQUEST_APPROVED" -> "✅";
-                    case "WAIT" -> "⏳";
-                    case "REQUEST_REJECTED" -> "❌";
-                    case "REQUEST_EXPIRED" -> "⌛";
-                    default -> "❓";
-                };
-
-                result.append(statusIcon)
-                        .append(" ")
-                        .append(status.getUserIdentifier())
-                        .append(" - ")
-                        .append(status.getResult());
-
-                if ("REQUEST_REJECTED".equals(status.getResult()) &&
-                        status.getRejectionReasonMessage() != null) {
-                    result.append(" (").append(status.getRejectionReasonMessage()).append(")");
-                }
-
-                result.append("\n");
-            });
-
-            return ResponseEntity.ok(result.toString());
-
-        } catch (Exception e) {
-            log.error("Ошибка проверки статусов заявок", e);
-            return ResponseEntity.status(500)
-                    .body("❌ Ошибка: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Тестовый эндпоинт для проверки статуса тестового пользователя
-     * GET http://localhost:8085/api/mco/test-bind-status
-     */
-    @GetMapping("/test-bind-status")
-    public ResponseEntity<String> testBindStatus() {
-        return ResponseEntity.ok(
-                "⚠️ Для проверки статуса нужен RequestId заявки.\n\n" +
-                        "Используйте:\n" +
-                        "GET /api/mco/bind-request-status?requestId=YOUR_REQUEST_ID\n\n" +
-                        "RequestId возвращается при вызове /api/mco/bind-user\n" +
-                        "Сохраните его для последующей проверки статуса."
-        );
     }
 }

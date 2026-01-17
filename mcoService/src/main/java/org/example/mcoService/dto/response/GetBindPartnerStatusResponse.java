@@ -22,6 +22,16 @@ import java.util.List;
 @XmlType(propOrder = {"statuses"})
 public class GetBindPartnerStatusResponse {
 
+    /**
+     * ВАЖНО: В ответе MCO API элементы находятся прямо внутри <Statuses>,
+     * а не обёрнуты в <BindPartnerStatus>!
+     * Реальная структура:
+     * <Statuses>
+     *   <RequestId>...</RequestId>
+     *   <Result>...</Result>
+     *   <UserIdentifier>...</UserIdentifier>
+     * </Statuses>
+     */
     @JsonProperty("Statuses")
     @XmlElement(name = "Statuses", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<BindPartnerStatus> statuses;

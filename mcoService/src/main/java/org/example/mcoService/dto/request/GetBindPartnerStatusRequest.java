@@ -25,9 +25,13 @@ public class GetBindPartnerStatusRequest {
     /**
      * Список идентификаторов заявок (PostBindPartnerRequest)
      * Не более 50 идентификаторов
+     *
+     * ВАЖНО: НЕ использовать @XmlElementWrapper!
+     * Элемент RequestIds должен повторяться для каждого значения:
+     * <RequestIds>value1</RequestIds>
+     * <RequestIds>value2</RequestIds>
      */
     @JsonProperty("RequestIds")
-    @XmlElementWrapper(name = "RequestIds", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
-    @XmlElement(name = "string", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
+    @XmlElement(name = "RequestIds", namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<String> requestIds;
 }

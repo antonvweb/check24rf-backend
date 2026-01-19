@@ -7,13 +7,18 @@ import org.example.mcoService.dto.api.ApiResponse;
 import org.example.mcoService.dto.api.BindRequestStatusDto;
 import org.example.mcoService.dto.api.CreateBindRequestDto;
 import org.example.mcoService.dto.api.ReceiptsResponseDto;
+import org.example.mcoService.dto.response.GetBindPartnerEventResponse;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.dto.response.PostBindPartnerBatchResponse;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,6 +29,79 @@ public class McoController {
 
     private final McoService mcoService;
     private final McoProperties mcoProperties;
+
+    /**
+     * Пакетное подключение пользователей
+     * POST /api/mco/bind-users-batch
+     * Body (JSON): ["79999999999", "79998888888", ...]
+     */
+    @PostMapping("/bind-users-batch")
+    public ResponseEntity<ApiResponse<Object>> bindUsersBatch(
+            @RequestBody List<String> phoneNumbers) {
+
+        try {
+            if (phoneNumbers == null || phoneNumbers.isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Список телефонов не может быть пустым")
+                );
+            }
+
+            log.info("Пакетное подключение {} пользователей", phoneNumbers.size());
+
+            String requestId = UUID.randomUUID().toString();
+            PostBindPartnerBatchResponse response = mcoService.bindUsersBatch(requestId, phoneNumbers);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("requestId", response.getRequestId());
+            data.put("acceptedCount", response.getAcceptedUserIdentifiers() != null ?
+                    response.getAcceptedUserIdentifiers().size() : 0);
+            data.put("rejectedCount", response.getRejectedUserIdentifiers() != null ?
+                    response.getRejectedUserIdentifiers().size() : 0);
+            data.put("acceptedUsers", response.getAcceptedUserIdentifiers());
+            data.put("rejectedUsers", response.getRejectedUserIdentifiers());
+            data.put("statusCheckUrl", "/api/mco/bind-request-status?requestId=" + requestId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Пакетная заявка отправлена",
+                    data
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка пакетного подключения", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Получение событий по заявкам на подключение
+     * GET /api/mco/bind-events?marker=S_FROM_END
+     */
+    @GetMapping("/bind-events")
+    public ResponseEntity<ApiResponse<Object>> getBindEvents(
+            @RequestParam(required = false, defaultValue = "U19GUk9NX0VORA==") String marker) {
+
+        try {
+            log.info("Запрос событий с маркером: {}", marker);
+
+            GetBindPartnerEventResponse response = mcoService.getBindPartnerEvents(marker);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("events", response.getEvents());
+            data.put("nextMarker", response.getMarker());
+            data.put("eventsCount", response.getEvents() != null ? response.getEvents().size() : 0);
+
+            return ResponseEntity.ok(ApiResponse.success(data));
+
+        } catch (Exception e) {
+            log.error("Ошибка получения событий", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
+
     /**
      * Регистрация партнера в системе МЧО
      * POST /api/mco/register?logoPath=/path/to/logo.jpg

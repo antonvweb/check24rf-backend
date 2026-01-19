@@ -531,4 +531,104 @@ public class McoApiClient {
             log.error("");
         }
     }
+
+    /**
+     * Пакетное подключение пользователей к партнеру
+     */
+    public PostBindPartnerBatchResponse bindUsersBatch(
+            String requestId,
+            List<String> phoneNumbers) {
+
+        if (phoneNumbers == null || phoneNumbers.isEmpty()) {
+            throw new IllegalArgumentException("Список телефонов не может быть пустым");
+        }
+        if (phoneNumbers.size() > 15000) {
+            throw new IllegalArgumentException("Максимум 15000 телефонов за один запрос");
+        }
+
+        log.info("Пакетное подключение {} пользователей", phoneNumbers.size());
+
+        PostBindPartnerBatchRequest innerRequest = PostBindPartnerBatchRequest.builder()
+                .requestId(requestId)
+                .userIdentifiers(phoneNumbers)
+                .permissionGroups(Collections.singletonList("DEFAULT"))
+                .isUnverifiedIdentifier(false)
+                .requireNoActiveRequests(false)
+                .build();
+
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
+
+        log.info("Запрос отправлен, MessageId: {}, опрашиваем результат...",
+                messageResponse.getMessageId());
+
+        try {
+            PostBindPartnerBatchResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    PostBindPartnerBatchResponse.class
+            );
+
+            int accepted = response.getAcceptedUserIdentifiers() != null ?
+                    response.getAcceptedUserIdentifiers().size() : 0;
+            int rejected = response.getRejectedUserIdentifiers() != null ?
+                    response.getRejectedUserIdentifiers().size() : 0;
+
+            log.info("✅ Принято: {}, Отклонено: {}", accepted, rejected);
+
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
+
+    /**
+     * Получение событий по заявкам на подключение
+     */
+    public GetBindPartnerEventResponse getBindPartnerEvents(String marker) {
+
+        log.info("Запрос событий с маркером: {}", marker);
+
+        GetBindPartnerEventRequest innerRequest = GetBindPartnerEventRequest.builder()
+                .marker(marker)
+                .build();
+
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
+
+        log.info("Запрос отправлен, MessageId: {}, опрашиваем результат...",
+                messageResponse.getMessageId());
+
+        try {
+            GetBindPartnerEventResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    GetBindPartnerEventResponse.class
+            );
+
+            int eventsCount = response.getEvents() != null ? response.getEvents().size() : 0;
+            log.info("✅ Получено событий: {}, Новый маркер: {}",
+                    eventsCount, response.getMarker());
+
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
 }

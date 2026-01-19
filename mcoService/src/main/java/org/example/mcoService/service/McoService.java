@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
-import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
-import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
-import org.example.mcoService.dto.response.PostBindPartnerResponse;
-import org.example.mcoService.dto.response.PostPlatformRegistrationResponse;
+import org.example.mcoService.dto.response.*;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,6 +22,7 @@ public class McoService {
 
     private final McoApiClient apiClient;
     private final McoProperties properties;
+    private final McoApiClient mcoApiClient;
 
     // ============================================
 // МЕТОДЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
@@ -146,6 +144,14 @@ public class McoService {
         // ВАЖНО: возвращаем RequestId, а не MessageId!
         // RequestId нужен для метода GetBindPartnerStatusRequest
         return requestId;
+    }
+
+    public PostBindPartnerBatchResponse bindUsersBatch(String requestId, List<String> phoneNumbers) {
+        return mcoApiClient.bindUsersBatch(requestId, phoneNumbers);
+    }
+
+    public GetBindPartnerEventResponse getBindPartnerEvents(String marker) {
+        return mcoApiClient.getBindPartnerEvents(marker);
     }
 
     /**

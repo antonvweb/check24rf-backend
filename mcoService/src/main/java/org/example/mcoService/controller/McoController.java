@@ -80,7 +80,7 @@ public class McoController {
      */
     @GetMapping("/bind-events")
     public ResponseEntity<ApiResponse<Object>> getBindEvents(
-            @RequestParam(required = false, defaultValue = "U19GUk9NX0VORA==") String marker) {
+            @RequestParam(required = false, defaultValue = "S_FROM_END") String marker) {
 
         try {
             log.info("Запрос событий с маркером: {}", marker);

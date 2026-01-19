@@ -3,10 +3,7 @@ package org.example.mcoService.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
-import org.example.mcoService.dto.api.ApiResponse;
-import org.example.mcoService.dto.api.BindRequestStatusDto;
-import org.example.mcoService.dto.api.CreateBindRequestDto;
-import org.example.mcoService.dto.api.ReceiptsResponseDto;
+import org.example.mcoService.dto.api.*;
 import org.example.mcoService.dto.response.*;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
@@ -93,6 +90,86 @@ public class McoController {
 
         } catch (Exception e) {
             log.error("Ошибка получения событий", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Отправка уведомления пользователю
+     * POST /api/mco/send-notification
+     * Body (JSON): {
+     *   "phoneNumber": "79999999999",
+     *   "title": "Специальное предложение!",
+     *   "message": "Получите **20% скидку** на следующую покупку!",
+     *   "shortMessage": "20% скидка для вас",
+     *   "category": "CASHBACK",
+     *   "externalItemId": "PROMO123",
+     *   "externalItemUrl": "https://example.com/promo"
+     * }
+     */
+    @PostMapping("/send-notification")
+    public ResponseEntity<ApiResponse<Object>> sendNotification(
+            @RequestBody SendNotificationDto dto) {
+
+        try {
+            // Валидация
+            if (dto.getPhoneNumber() == null || dto.getPhoneNumber().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Номер телефона обязателен")
+                );
+            }
+            if (dto.getTitle() == null || dto.getTitle().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Заголовок обязателен")
+                );
+            }
+            if (dto.getMessage() == null || dto.getMessage().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Сообщение обязательно")
+                );
+            }
+            if (dto.getShortMessage() == null || dto.getShortMessage().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Короткое сообщение обязательно")
+                );
+            }
+
+            // Категория по умолчанию
+            String category = dto.getCategory() != null ? dto.getCategory() : "GENERAL";
+            if (!category.equals("GENERAL") && !category.equals("CASHBACK")) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Категория должна быть GENERAL или CASHBACK")
+                );
+            }
+
+            log.info("Отправка уведомления пользователю: {}", dto.getPhoneNumber());
+
+            String requestId = UUID.randomUUID().toString();
+            PostNotificationResponse response = mcoService.sendNotification(
+                    requestId,
+                    dto.getPhoneNumber(),
+                    dto.getTitle(),
+                    dto.getMessage(),
+                    dto.getShortMessage(),
+                    category,
+                    dto.getExternalItemId(),
+                    dto.getExternalItemUrl()
+            );
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("requestId", response.getRequestId());
+            data.put("handledAt", response.getHandledAt());
+            data.put("phoneNumber", dto.getPhoneNumber());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Уведомление успешно отправлено",
+                    data
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка отправки уведомления", e);
             return ResponseEntity.status(500).body(
                     ApiResponse.error("Ошибка: " + e.getMessage())
             );

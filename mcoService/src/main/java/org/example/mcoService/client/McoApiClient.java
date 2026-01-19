@@ -682,4 +682,59 @@ public class McoApiClient {
             throw new RuntimeException("Прервано ожидание результата", e);
         }
     }
+    /**
+     * Отправка уведомления пользователю
+     */
+    public PostNotificationResponse sendNotification(
+            String requestId,
+            String phoneNumber,
+            String title,
+            String message,
+            String shortMessage,
+            String category,
+            String externalItemId,
+            String externalItemUrl) {
+
+        log.info("Отправка уведомления пользователю: {}, категория: {}", phoneNumber, category);
+
+        PostNotificationRequest innerRequest = PostNotificationRequest.builder()
+                .requestId(requestId)
+                .userIdentifier(phoneNumber)
+                .notificationTitle(title)
+                .notificationMessage(message)
+                .shortMessage(shortMessage)
+                .notificationCategory(category)
+                .externalItemId(externalItemId)
+                .externalItemUrl(externalItemUrl)
+                .build();
+
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
+
+        log.info("Запрос отправлен, MessageId: {}, опрашиваем результат...",
+                messageResponse.getMessageId());
+
+        try {
+            PostNotificationResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    PostNotificationResponse.class
+            );
+
+            log.info("✅ Уведомление отправлено, RequestId: {}, HandledAt: {}",
+                    response.getRequestId(), response.getHandledAt());
+
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
 }

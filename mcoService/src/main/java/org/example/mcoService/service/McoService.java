@@ -28,6 +28,21 @@ public class McoService {
         return mcoApiClient.getUnboundPartners(marker);
     }
 
+    public PostNotificationResponse sendNotification(
+            String requestId,
+            String phoneNumber,
+            String title,
+            String message,
+            String shortMessage,
+            String category,
+            String externalItemId,
+            String externalItemUrl) {
+        return mcoApiClient.sendNotification(
+                requestId, phoneNumber, title, message,
+                shortMessage, category, externalItemId, externalItemUrl
+        );
+    }
+
     /**
      * Получение статуса заявки на подключение пользователя
      *

@@ -631,4 +631,55 @@ public class McoApiClient {
             throw new RuntimeException("Прервано ожидание результата", e);
         }
     }
+
+    /**
+     * Получение списка отключившихся пользователей
+     */
+    public GetUnboundPartnerResponse getUnboundPartners(String marker) {
+
+        log.info("Запрос отключившихся пользователей с маркером: {}", marker);
+
+        GetUnboundPartnerRequest innerRequest = GetUnboundPartnerRequest.builder()
+                .marker(marker)
+                .build();
+
+        SendMessageRequest request = SendMessageRequest.builder()
+                .message(new SendMessageRequest.MessageWrapper(innerRequest))
+                .build();
+
+        SendMessageResponse messageResponse = soapClient.sendSoapRequest(
+                request,
+                SendMessageResponse.class,
+                "SendMessageRequest"
+        );
+
+        log.info("Запрос отправлен, MessageId: {}, опрашиваем результат...",
+                messageResponse.getMessageId());
+
+        try {
+            GetUnboundPartnerResponse response = soapClient.getAsyncResult(
+                    messageResponse.getMessageId(),
+                    GetUnboundPartnerResponse.class
+            );
+
+            int unboundsCount = response.getUnbounds() != null ? response.getUnbounds().size() : 0;
+            log.info("✅ Отключившихся: {}, HasMore: {}, NextMarker: {}",
+                    unboundsCount, response.getHasMore(), response.getNextMarker());
+
+            if (response.getUnbounds() != null) {
+                response.getUnbounds().forEach(unbound -> {
+                    log.info("  UserIdentifier: {}, RequestId: {}, ResponseTime: {}",
+                            unbound.getUserIdentifier(),
+                            unbound.getRequestId(),
+                            unbound.getResponseTime());
+                });
+            }
+
+            return response;
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано ожидание результата", e);
+        }
+    }
 }

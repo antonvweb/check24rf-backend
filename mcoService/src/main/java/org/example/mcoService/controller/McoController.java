@@ -7,10 +7,7 @@ import org.example.mcoService.dto.api.ApiResponse;
 import org.example.mcoService.dto.api.BindRequestStatusDto;
 import org.example.mcoService.dto.api.CreateBindRequestDto;
 import org.example.mcoService.dto.api.ReceiptsResponseDto;
-import org.example.mcoService.dto.response.GetBindPartnerEventResponse;
-import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
-import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
-import org.example.mcoService.dto.response.PostBindPartnerBatchResponse;
+import org.example.mcoService.dto.response.*;
 import org.example.mcoService.service.McoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -96,6 +93,39 @@ public class McoController {
 
         } catch (Exception e) {
             log.error("Ошибка получения событий", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Получение списка отключившихся пользователей
+     * GET /api/mco/unbound-users?marker=S_FROM_END
+     */
+    @GetMapping("/unbound-users")
+    public ResponseEntity<ApiResponse<Object>> getUnboundUsers(
+            @RequestParam(required = false, defaultValue = "S_FROM_END") String marker) {
+
+        try {
+            log.info("Запрос отключившихся пользователей с маркером: {}", marker);
+
+            GetUnboundPartnerResponse response = mcoService.getUnboundPartners(marker);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("unboundUsers", response.getUnbounds());
+            data.put("nextMarker", response.getNextMarker());
+            data.put("hasMore", response.getHasMore());
+            data.put("count", response.getUnbounds() != null ? response.getUnbounds().size() : 0);
+
+            String message = response.getHasMore()
+                    ? "Получены отключившиеся пользователи (есть еще данные)"
+                    : "Получены все отключившиеся пользователи";
+
+            return ResponseEntity.ok(ApiResponse.success(message, data));
+
+        } catch (Exception e) {
+            log.error("Ошибка получения отключившихся пользователей", e);
             return ResponseEntity.status(500).body(
                     ApiResponse.error("Ошибка: " + e.getMessage())
             );

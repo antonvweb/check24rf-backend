@@ -24,10 +24,9 @@ public class McoService {
     private final McoProperties properties;
     private final McoApiClient mcoApiClient;
 
-    // ============================================
-// МЕТОДЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
-// Добавить эти методы в конец класса McoService
-// ============================================
+    public GetUnboundPartnerResponse getUnboundPartners(String marker) {
+        return mcoApiClient.getUnboundPartners(marker);
+    }
 
     /**
      * Получение статуса заявки на подключение пользователя

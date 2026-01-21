@@ -5,15 +5,6 @@ import jakarta.xml.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * ✅ ИСПРАВЛЕНО: Используется правильный namespace из официальной Postman коллекции МЧО
- *
- * БЫЛО (неправильно):
- * namespace = "urn://x-artefacts-gnivc-ru/ais3/smz/SmzIntegrationService/v0.1"
- *
- * СТАЛО (правильно):
- * namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0"
- */
 @Data
 @XmlRootElement(name = "GetReceiptsTapeResponse",
         namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")

@@ -28,9 +28,7 @@ public class GetReceiptsTapeResponse {
             namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private Long totalExpectedRemainingPolls;
 
-    @XmlElementWrapper(name = "Receipts",
-            namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
-    @XmlElement(name = "Receipt",
+    @XmlElement(name = "Receipts",
             namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
     private List<Receipt> receipts;
 

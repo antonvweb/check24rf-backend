@@ -7,20 +7,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Запрос на верификацию кода
+ * Запрос на отправку кода верификации
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VerifyRequest {
+public class SendCodeRequest {
     
     @NotBlank(message = "Идентификатор (телефон или email) обязателен")
-    private String identifier;
+    private String identifier; // Может быть телефон или email
     
-    @NotBlank(message = "Код подтверждения обязателен")
-    private String code;
-    
-    @NotBlank(message = "Токен капчи обязателен")
-    private String captchaToken;
+    // Дополнительно можно добавить поле для явного указания типа
+    // private String type; // "phone" или "email"
 }

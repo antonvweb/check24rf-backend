@@ -1,160 +1,222 @@
 package org.example.authService.service;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.authService.dto.LoginRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.authService.entity.User;
 import org.example.authService.repository.UserRepository;
 import org.example.authService.security.JwtUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Random;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class AuthService {
-    @Autowired private UserRepository userRepo;
-    @Autowired private JwtUtil jwtUtil;
-    @Autowired private SmsService smsService;
-    @Autowired private RedisTemplate<String, String> redisTemplate;
+    
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final SmsService smsService;
+    private final EmailService emailService; // Нужно создать
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${jwt.refresh-token.expiration:#{7*24*60*60*1000}}")
     private long REFRESH_EXPIRY;
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
+    private static final String CODE_PREFIX_PHONE = "code:phone:";
+    private static final String CODE_PREFIX_EMAIL = "code:email:";
 
-    public Map<String, String> authenticate(LoginRequest req, HttpServletResponse response) {
-        User user = userRepo.findByPhoneNumber(req.getPhoneNumber())
-                .orElseGet(() -> {
-                    User newUser = new User();
-                    newUser.setPhoneNumber(req.getPhoneNumber());
-                    return userRepo.save(newUser);
-                });
+    /**
+     * Отправка кода верификации на телефон или email
+     */
+    public void sendVerificationCode(String identifier) {
+        log.info("📧 Отправка кода верификации на: {}", identifier);
+        
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Идентификатор не может быть пустым");
+        }
+        
+        // Генерируем 6-значный код
+        String code = String.format("%06d", new Random().nextInt(1_000_000));
+        
+        // Определяем тип: телефон или email
+        boolean isEmail = identifier.contains("@");
+        String redisKey = isEmail 
+                ? CODE_PREFIX_EMAIL + identifier 
+                : CODE_PREFIX_PHONE + identifier;
+        
+        // Сохраняем код в Redis на 5 минут
+        redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRATION);
+        log.info("💾 Код сохранен в Redis с ключом: {}", redisKey);
+        
+        // Отправляем код
+        if (isEmail) {
+            emailService.sendVerificationCode(identifier, code);
+            log.info("✉️ Код отправлен на email: {}", identifier);
+        } else {
+            smsService.sendSms(identifier, "Ваш код подтверждения: " + code);
+            log.info("📱 Код отправлен на телефон: {}", identifier);
+        }
+    }
 
+    /**
+     * Проверка кода и создание/авторизация пользователя
+     * Возвращает JWT токены
+     */
+    @Transactional
+    public Map<String, String> verifyCodeAndAuthenticate(
+            String identifier, 
+            String code, 
+            HttpServletResponse response) {
+        
+        log.info("🔍 Проверка кода для: {}", identifier);
+        
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Идентификатор не может быть пустым");
+        }
+        
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("Код не может быть пустым");
+        }
+        
+        // Очистка данных
+        String cleanIdentifier = identifier.trim();
+        String cleanCode = code.trim();
+        
+        // Определяем тип и получаем код из Redis
+        boolean isEmail = cleanIdentifier.contains("@");
+        String redisKey = isEmail 
+                ? CODE_PREFIX_EMAIL + cleanIdentifier 
+                : CODE_PREFIX_PHONE + cleanIdentifier;
+        
+        String storedCode = redisTemplate.opsForValue().get(redisKey);
+        
+        if (storedCode == null) {
+            log.warn("❌ Код не найден в Redis для: {}", cleanIdentifier);
+            throw new IllegalArgumentException("Код не найден или истек. Запросите новый код.");
+        }
+        
+        // Проверяем код
+        if (!cleanCode.equals(storedCode.trim())) {
+            log.warn("❌ Неверный код для: {}", cleanIdentifier);
+            throw new IllegalArgumentException("Неверный код подтверждения");
+        }
+        
+        log.info("✅ Код верен для: {}", cleanIdentifier);
+        
+        // Удаляем код из Redis (одноразовое использование)
+        redisTemplate.delete(redisKey);
+        log.info("🗑️ Код удален из Redis");
+        
+        // Получаем или создаем пользователя
+        User user;
+        if (isEmail) {
+            user = userRepository.findByEmail(cleanIdentifier)
+                    .orElseGet(() -> createUser(null, cleanIdentifier));
+        } else {
+            user = userRepository.findByPhoneNumber(cleanIdentifier)
+                    .orElseGet(() -> createUser(cleanIdentifier, null));
+        }
+        
+        // Активируем пользователя
         user.setActive(true);
-        userRepo.save(user);
-
+        userRepository.save(user);
+        log.info("👤 Пользователь активирован: {}", user.getId());
+        
+        // Генерируем токены
         String accessToken = jwtUtil.generateAccessToken(user.getId().toString());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId().toString());
-
+        
+        // Устанавливаем refresh token в httpOnly cookie
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("Strict")
-                .maxAge(REFRESH_EXPIRY / 1000)
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-        return Map.of(
-                "token", accessToken,
-                "userId", user.getId().toString()
-        );
-    }
-
-    public void sendVerificationCode(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            throw new IllegalArgumentException("Phone number must not be null or empty");
-        }
-        String code = String.format("%06d", new Random().nextInt(1_000_000));
-        redisTemplate.opsForValue().set(phoneNumber, code, CODE_EXPIRATION);
-        smsService.sendSms(phoneNumber, "Code: " + code);
-    }
-
-
-    public boolean verifyCode(String phone, String code) {
-        log.info("🔍 Verifying code for phone: {}", phone);
-        log.info("🔍 Received code: '{}'", code);
-
-        // Проверка входных параметров
-        if (phone == null || phone.trim().isEmpty()) {
-            log.warn("❌ Phone is null or empty");
-            return false;
-        }
-
-        if (code == null || code.trim().isEmpty()) {
-            log.warn("❌ Code is null or empty");
-            return false;
-        }
-
-        // Очистка входных данных
-        String cleanPhone = phone.trim();
-        String cleanCode = code.trim();
-
-        log.info("🔍 Clean phone: '{}', Clean code: '{}'", cleanPhone, cleanCode);
-
-        try {
-            // Получение кода из Redis
-            String redisCode = (String) redisTemplate.opsForValue().get(cleanPhone);
-            log.info("🔍 Redis code for phone '{}': '{}'", cleanPhone, redisCode);
-
-            if (redisCode == null) {
-                log.warn("❌ No code found in Redis for phone: {}", cleanPhone);
-                return false;
-            }
-
-            // Очистка кода из Redis
-            String cleanRedisCode = redisCode.trim();
-            log.info("🔍 Clean Redis code: '{}'", cleanRedisCode);
-
-            // Сравнение кодов
-            boolean isValid = cleanCode.equals(cleanRedisCode);
-            log.info("🔍 Code comparison result: {} ('{}' == '{}')", isValid, cleanCode, cleanRedisCode);
-
-            if (isValid) {
-                log.info("✅ Code verification successful for phone: {}", cleanPhone);
-                // Удаляем код из Redis после успешной проверки
-                redisTemplate.delete(cleanPhone);
-                log.info("🗑️ Code deleted from Redis for phone: {}", cleanPhone);
-            } else {
-                log.warn("❌ Code verification failed for phone: {}", cleanPhone);
-            }
-
-            return isValid;
-
-        } catch (Exception e) {
-            log.error("❌ Error during code verification for phone: {}", cleanPhone, e);
-            return false;
-        }
-    }
-
-    public String refreshToken(HttpServletRequest request, HttpServletResponse response) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) throw new RuntimeException("No cookies");
-
-        String token = Arrays.stream(cookies)
-                .filter(c -> c.getName().equals("refreshToken"))
-                .findFirst()
-                .map(Cookie::getValue)
-                .orElseThrow(() -> new RuntimeException("No refresh token"));
-
-        if (jwtUtil.isExpired(token)) throw new RuntimeException("Refresh expired");
-
-        Optional<String> userId = jwtUtil.getUserId(token);
-
-        String newAccess =  jwtUtil.generateAccessToken(userId.orElse(null));
-        String newRefresh =  jwtUtil.generateRefreshToken(userId.orElse(null));
-
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefresh)
-                .httpOnly(true)
-                .secure(true)
+                .secure(true) // HTTPS only в production
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
-
+        
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        
+        log.info("🎫 JWT токены созданы для пользователя: {}", user.getId());
+        
+        return Map.of(
+                "accessToken", accessToken,
+                "userId", user.getId().toString(),
+                "phoneNumber", user.getPhoneNumber() != null ? user.getPhoneNumber() : "",
+                "email", user.getEmail() != null ? user.getEmail() : ""
+        );
+    }
 
-        return newAccess;
+    /**
+     * Создание нового пользователя
+     */
+    private User createUser(String phoneNumber, String email) {
+        User user = User.builder()
+                .phoneNumber(phoneNumber)
+                .email(email)
+                .createdAt(LocalDateTime.now())
+                .isActive(true)
+                .build();
+        
+        user = userRepository.save(user);
+        log.info("✨ Создан новый пользователь: {} (phone: {}, email: {})", 
+                user.getId(), phoneNumber, email);
+        
+        return user;
+    }
+
+    /**
+     * Обновление access токена через refresh token
+     */
+    public String refreshAccessToken(String refreshToken) {
+        log.info("🔄 Обновление access токена");
+        
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException("Refresh token не предоставлен");
+        }
+        
+        if (jwtUtil.isExpired(refreshToken)) {
+            throw new IllegalArgumentException("Refresh token истек");
+        }
+        
+        String userId = jwtUtil.getUserId(refreshToken)
+                .orElseThrow(() -> new IllegalArgumentException("Некорректный refresh token"));
+        
+        // Проверяем существование пользователя
+        if (!userRepository.existsById(java.util.UUID.fromString(userId))) {
+            throw new IllegalArgumentException("Пользователь не найден");
+        }
+        
+        String newAccessToken = jwtUtil.generateAccessToken(userId);
+        log.info("✅ Access токен обновлен для пользователя: {}", userId);
+        
+        return newAccessToken;
+    }
+
+    /**
+     * Выход из системы (инвалидация токенов)
+     */
+    public void logout(HttpServletResponse response) {
+        // Удаляем refresh token cookie
+        ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+        
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
+        log.info("👋 Пользователь вышел из системы");
     }
 }
-

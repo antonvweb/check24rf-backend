@@ -1,4 +1,9 @@
 package org.example.authService.dto;
+import lombok.Builder;
+import lombok.Getter;
 
-public record TokenResponse(String token) {
+@Getter
+@Builder
+public class TokenResponse {
+    private String accessToken;
 }

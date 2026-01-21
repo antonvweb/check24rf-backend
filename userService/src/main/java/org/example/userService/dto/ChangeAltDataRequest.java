@@ -3,7 +3,6 @@ package org.example.userService.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-
 public class ChangeAltDataRequest {
     @NotBlank(message = "Тип изменения не может быть пустым")
     @Pattern(regexp = "phone|email", message = "Тип должен быть 'phone' или 'email'")

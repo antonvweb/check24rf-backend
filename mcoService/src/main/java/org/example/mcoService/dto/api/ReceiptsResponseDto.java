@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -57,7 +56,7 @@ public class ReceiptsResponseDto {
         private String phone;
         private String email;
         private byte[] json;
-        private LocalDateTime receiveDate;
+        private String receiveDate;
         private String sourceCode;
     }
 }

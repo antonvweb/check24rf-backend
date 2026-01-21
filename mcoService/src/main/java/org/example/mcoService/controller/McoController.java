@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.api.*;
 import org.example.mcoService.dto.response.*;
+import org.example.mcoService.entity.Receipt;
 import org.example.mcoService.service.McoService;
+import org.example.mcoService.service.ReceiptService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,72 @@ public class McoController {
 
     private final McoService mcoService;
     private final McoProperties mcoProperties;
+    private final ReceiptService receiptService;
+
+    /**
+     * Синхронизация чеков пользователя при заходе на сайт
+     * GET /api/mco/receipts/sync-user?phone=79054455906
+     */
+    @GetMapping("/receipts/sync-user")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> syncUserReceipts(
+            @RequestParam String phone) {
+
+        try {
+            log.info(">>> СИНХРОНИЗАЦИЯ ЧЕКОВ ДЛЯ ПОЛЬЗОВАТЕЛЯ: {} <<<", phone);
+
+            // 1. Получаем свежие чеки от MCO API
+            GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker("S_FROM_END");
+
+            // 2. Синхронизируем чеки пользователя с БД
+            int newReceiptsCount = receiptService.syncUserReceipts(phone,
+                    response.getReceipts() != null ? response.getReceipts() : List.of());
+
+            // 3. Получаем все чеки пользователя из БД
+            List<Receipt> userReceipts = receiptService.getUserReceiptsByPhone(phone);
+
+            Map<String, Object> data = Map.of(
+                    "newReceiptsAdded", newReceiptsCount,
+                    "totalReceipts", userReceipts.size(),
+                    "receipts", userReceipts
+            );
+
+            String message = newReceiptsCount > 0
+                    ? String.format("Добавлено %d новых чеков", newReceiptsCount)
+                    : "Новых чеков нет";
+
+            return ResponseEntity.ok(ApiResponse.success(message, data));
+
+        } catch (Exception e) {
+            log.error("Ошибка синхронизации чеков пользователя {}", phone, e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка синхронизации: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * Получить чеки пользователя из БД
+     * GET /api/mco/receipts/user?phone=79054455906
+     */
+    @GetMapping("/receipts/user")
+    public ResponseEntity<ApiResponse<List<Receipt>>> getUserReceipts(
+            @RequestParam String phone) {
+
+        try {
+            List<Receipt> receipts = receiptService.getUserReceiptsByPhone(phone);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    String.format("Найдено чеков: %d", receipts.size()),
+                    receipts
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка получения чеков пользователя {}", phone, e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
 
     /**
      * Пакетное подключение пользователей

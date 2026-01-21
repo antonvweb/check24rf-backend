@@ -23,6 +23,7 @@ public class McoService {
     private final McoApiClient apiClient;
     private final McoProperties properties;
     private final McoApiClient mcoApiClient;
+    private ReceiptService receiptService;
 
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
         return mcoApiClient.getUnboundPartners(marker);
@@ -228,9 +229,16 @@ public class McoService {
      */
     public GetReceiptsTapeResponse getReceiptsByMarker(String marker) {
         log.info("Получение чеков по маркеру: {}", marker);
-        return apiClient.getReceiptsSync(marker);
-    }
+        GetReceiptsTapeResponse response = apiClient.getReceiptsSync(marker);
 
+        // ✅ АВТОМАТИЧЕСКИ СОХРАНЯЕМ ЧЕКИ В БД
+        if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
+            int savedCount = receiptService.saveReceipts(response.getReceipts());
+            log.info("Автоматически сохранено {} новых чеков в БД", savedCount);
+        }
+
+        return response;
+    }
     /**
      * Получение статистики по чекам (сколько всего доступно)
      * @return строка со статистикой

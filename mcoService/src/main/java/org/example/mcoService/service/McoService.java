@@ -23,7 +23,7 @@ public class McoService {
     private final McoApiClient apiClient;
     private final McoProperties properties;
     private final McoApiClient mcoApiClient;
-    private ReceiptService receiptService;
+    private final ReceiptService receiptService;
 
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
         return mcoApiClient.getUnboundPartners(marker);

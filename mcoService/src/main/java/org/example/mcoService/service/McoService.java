@@ -90,8 +90,6 @@ public class McoService {
      * @return статус заявки (если она была создана через connectUser)
      */
     public String checkUserBindStatus(String phone) {
-        // Примечание: для полноценной работы нужно сохранять requestId при вызове connectUser
-        // Пока что это демонстрационный метод
         log.warn("Метод checkUserBindStatus требует сохранения requestId при создании заявки");
         throw new UnsupportedOperationException("Нужно сохранять requestId в базу при вызове connectUser");
     }

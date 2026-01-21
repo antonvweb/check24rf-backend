@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -43,7 +44,7 @@ public class ReceiptService {
         for (GetReceiptsTapeResponse.Receipt mcoReceipt : receiptsFromMco) {
             try {
                 // Парсим Base64 JSON
-                String jsonString = decodeBase64Json(mcoReceipt.getJson());
+                String jsonString = bytesToString(mcoReceipt.getJson());
                 JsonNode jsonNode = objectMapper.readTree(jsonString);
 
                 // Извлекаем фискальные данные для проверки дубликата
@@ -168,8 +169,9 @@ public class ReceiptService {
     /**
      * Декодировать Base64 JSON из чека
      */
-    private String decodeBase64Json(byte[] base64Data) {
-        return new String(Base64.getDecoder().decode(base64Data));
+    private String bytesToString(byte[] jsonBytes) {
+        return new String(jsonBytes, StandardCharsets.UTF_8);
+        // ✅ Просто преобразует байты в строку
     }
 
     /**

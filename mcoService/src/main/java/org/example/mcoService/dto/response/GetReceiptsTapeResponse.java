@@ -2,7 +2,6 @@ package org.example.mcoService.dto.response;
 
 import lombok.Data;
 import jakarta.xml.bind.annotation.*;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -45,7 +44,7 @@ public class GetReceiptsTapeResponse {
 
         @XmlElement(name = "ReceiveDate",
                 namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")
-        private LocalDateTime receiveDate;
+        private String receiveDate;
 
         @XmlElement(name = "SourceCode",
                 namespace = "urn://x-artefacts-gnivc-ru/ais3/DR/DrPartnersIntegrationService/types/1.0")

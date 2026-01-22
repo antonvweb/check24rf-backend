@@ -57,7 +57,6 @@ public class AuthService {
             throw new IllegalArgumentException("Идентификатор не может быть пустым");
         }
 
-        // Генерируем 6-значный код
         String code = String.format("%06d", new Random().nextInt(1_000_000));
 
         // Определяем тип: телефон или email

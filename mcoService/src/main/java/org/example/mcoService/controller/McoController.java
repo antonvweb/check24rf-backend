@@ -338,16 +338,6 @@ public class McoController {
         }
     }
 
-    /**
-     * Подключение тестового пользователя (фиксированный номер)
-     * POST /api/mco/bind-user-test
-     */
-    @PostMapping("/bind-user-test")
-    public ResponseEntity<ApiResponse<CreateBindRequestDto>> bindUserTest() {
-        String testPhone = "79054455906";
-        return bindUser(testPhone, "DEFAULT");
-    }
-
     // ==========================================
     // СТАТУСЫ ЗАЯВОК
     // ==========================================
@@ -431,46 +421,8 @@ public class McoController {
     // ==========================================
 
     /**
-     * Тестовое получение чеков (одна порция)
-     * GET /api/mco/receipts/test
-     */
-    @GetMapping("/receipts/test")
-    public ResponseEntity<ApiResponse<ReceiptsResponseDto>> testReceipts() {
-        try {
-            log.info(">>> ЗАПУСК ТЕСТОВОГО ПОЛУЧЕНИЯ ЧЕКОВ <<<");
-
-            int receiptsCount = mcoService.testReceiptsOnce();
-
-            if (receiptsCount == 0) {
-                return ResponseEntity.ok(ApiResponse.success(
-                        "Чеков не найдено. Убедитесь что пользователь подключен и отсканировал чеки в приложении МЧО.",
-                        ReceiptsResponseDto.builder()
-                                .totalCount(0)
-                                .receipts(List.of())
-                                .info("Нет подключенных пользователей или нет отсканированных чеков")
-                                .build()
-                ));
-            }
-
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Чеки успешно получены. Подробности в логах.",
-                    ReceiptsResponseDto.builder()
-                            .totalCount(receiptsCount)
-                            .info("Для получения детальной информации смотрите логи приложения")
-                            .build()
-            ));
-
-        } catch (Exception e) {
-            log.error("Ошибка тестирования получения чеков", e);
-            return ResponseEntity.status(500).body(
-                    ApiResponse.error("Ошибка получения чеков: " + e.getMessage())
-            );
-        }
-    }
-
-    /**
      * Получение чеков по маркеру
-     * GET /api/mco/receipts?marker=S_FROM_END
+     * GET /api/mco/receipts?marker=S_FROM_END/S_FROM_BEGINNING
      */
     @GetMapping("/receipts")
     public ResponseEntity<ApiResponse<ReceiptsResponseDto>> getReceiptsByMarker(
@@ -539,26 +491,6 @@ public class McoController {
     }
 
     /**
-     * Детальный тест получения чеков
-     * GET /api/mco/receipts/test-detailed
-     */
-    @GetMapping("/receipts/test-detailed")
-    public ResponseEntity<ApiResponse<Object>> testReceiptsDetailed() {
-        try {
-            mcoService.detailedReceiptsTest();
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Детальный тест завершен. Смотрите логи для подробностей.",
-                    null
-            ));
-        } catch (Exception e) {
-            log.error("Ошибка детального теста", e);
-            return ResponseEntity.status(500).body(
-                    ApiResponse.error("Ошибка детального теста: " + e.getMessage())
-            );
-        }
-    }
-
-    /**
      * Получение статистики по чекам
      * GET /api/mco/receipts/stats
      */
@@ -589,35 +521,5 @@ public class McoController {
                 "МЧО Сервис работает корректно",
                 null
         ));
-    }
-
-    /**
-     * Диагностика подключения
-     * GET /api/mco/diagnose
-     */
-    @GetMapping("/diagnose")
-    public ResponseEntity<ApiResponse<Object>> diagnose() {
-        try {
-            boolean tokenPresent = mcoProperties.getApi().getToken() != null;
-            boolean userTokenPresent = mcoProperties.getApi().getUserToken() != null;
-
-            if (!tokenPresent || !userTokenPresent) {
-                return ResponseEntity.ok(ApiResponse.error(
-                        "Токены не настроены",
-                        "MISSING_TOKENS",
-                        "Token present: " + tokenPresent + ", UserToken present: " + userTokenPresent
-                ));
-            }
-
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Конфигурация корректна. API URL: " + mcoProperties.getApi().getBaseUrl(),
-                    null
-            ));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(
-                    ApiResponse.error("Ошибка диагностики: " + e.getMessage())
-            );
-        }
     }
 }

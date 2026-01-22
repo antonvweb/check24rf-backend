@@ -99,23 +99,7 @@ public class AuthController {
                 request.getIdentifier(), request.getCode());
         
         try {
-            // 1. Проверяем капчу
-            boolean captchaValid = captchaService.validateCaptchaSync(
-                    request.getCaptchaToken(),
-                    userIP
-            );
-            
-            if (!captchaValid) {
-                log.warn("❌ Капча не прошла проверку для IP: {}", userIP);
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.<AuthResponse>builder()
-                                .success(false)
-                                .message("Капча не прошла проверку")
-                                .build());
-            }
-            
-            log.info("✅ Капча прошла проверку");
-            
+
             // 2. Проверяем код и создаем/авторизуем пользователя
             Map<String, String> authData = authService.verifyCodeAndAuthenticate(
                     request.getIdentifier(),

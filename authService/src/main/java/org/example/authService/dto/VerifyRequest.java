@@ -20,7 +20,4 @@ public class VerifyRequest {
     
     @NotBlank(message = "Код подтверждения обязателен")
     private String code;
-    
-    @NotBlank(message = "Токен капчи обязателен")
-    private String captchaToken;
 }

@@ -60,7 +60,7 @@ jobs:
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/$module/
           done
 
-      - name: 🔨 Build all modules on server
+      - name: 🔨 Build all modules on server (one-shot build)
         env:
           SSH_AUTH_SOCK: ""
         run: |
@@ -70,26 +70,14 @@ jobs:
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
-          
-            echo "📦 Installing parent POM..."
-            mvn clean install -f pom.xml -DskipTests
-          
-            echo "🔨 Building common module..."
-            cd common
-            mvn clean install -U -DskipTests
-            cd ..
-          
-            echo "🔨 Building all services..."
-            for service in mcoService adminPanelService userService authService; do
-              if [ -d "$service" ]; then
-                echo "📦 Building $service..."
-                cd $service
-                mvn clean package -U -DskipTests
-                cd ..
-              fi
-            done
-          
-            echo "All modules built successfully!"
+
+            echo "🧹 Cleaning previous builds..."
+            mvn clean -f pom.xml
+
+            echo "📦 Building entire project once (parent + all modules)..."
+            mvn clean install -U -DskipTests -T 1C  # -T 1C = многопоточно, ускоряет на 30–60%
+
+            echo "All modules built successfully in one pass!"
           EOF
 
       - name: 🔄 Restart all PM2 services

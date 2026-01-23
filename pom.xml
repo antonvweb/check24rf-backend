@@ -15,13 +15,7 @@
         <module>mcoService</module>
         <module>adminPanelService</module>
         <module>userService</module>
-        <module>archiveService</module>
-        <module>notificationService</module>
         <module>authService</module>
-        <module>checkService</module>
-        <module>checkRenderService</module>
-        <module>billingService</module>
-        <module>supportService</module>
     </modules>
 
     <properties>

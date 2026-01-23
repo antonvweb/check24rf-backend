@@ -73,7 +73,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <scope>provided</scope>
+            <version>${lombok.version}</version>
+            <scope>compile</scope>  <!-- временно, потом вернёшь provided -->
         </dependency>
 
         <!-- PostgreSQL -->

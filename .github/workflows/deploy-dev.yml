@@ -46,7 +46,7 @@ jobs:
         env:
           SSH_AUTH_SOCK: ""
         run: |
-          MODULES="mcoService adminPanelService userService authService"
+          MODULES="mcoService common adminPanelService userService authService"
           
           for module in $MODULES; do
             echo "📦 Syncing $module..."

@@ -1,3 +1,4 @@
+
 package org.example.common.entity;
 
 import jakarta.persistence.*;

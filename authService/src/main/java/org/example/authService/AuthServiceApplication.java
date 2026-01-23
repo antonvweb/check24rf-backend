@@ -2,10 +2,14 @@ package org.example.authService;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = {
         "org.example.common"  // Сканируем пакеты из common модуля
+})
+@EntityScan(basePackages = {
+        "org.example.common.entity"        // Entity из common модуля
 })
 @EnableJpaRepositories(basePackages = {
         "org.example.common.repository"       // Repository из common модуля

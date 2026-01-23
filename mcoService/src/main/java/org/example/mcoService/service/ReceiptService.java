@@ -6,9 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.entity.Receipt;
-import org.example.mcoService.entity.User;
+import org.example.common.entity.User;
 import org.example.mcoService.repository.ReceiptRepository;
-import org.example.mcoService.repository.UserRepository;
+import org.example.common.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

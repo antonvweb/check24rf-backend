@@ -3,7 +3,7 @@ package org.example.mcoService.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
-import org.example.mcoService.repository.UserRepository;
+import org.example.common.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;

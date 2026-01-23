@@ -36,7 +36,7 @@ cors:
 jwt:
   secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
   access-token:
-    expiration: 3600000  # 1 час
+    expiration: 10800000  # 1 час
   refresh-token:
     expiration: 604800000  # 7 дней
 security:

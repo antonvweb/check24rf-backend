@@ -42,6 +42,9 @@ public class User {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "is_partner_connected")
+    private boolean isPartnerConnected;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

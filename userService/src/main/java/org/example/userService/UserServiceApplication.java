@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@EnableConfigurationProperties(CorsProperties.class)
 @SpringBootApplication(scanBasePackages = {
         "org.example.userService",
         "org.example.common"  // Сканируем пакеты из common модуля

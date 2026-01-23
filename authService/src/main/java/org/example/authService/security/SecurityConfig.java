@@ -1,5 +1,6 @@
 package org.example.authService.security;
 
+import org.example.common.security.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

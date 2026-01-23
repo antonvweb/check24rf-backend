@@ -2,11 +2,15 @@ package org.example.mcoService;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(scanBasePackages = {
         "org.example.common"
+})
+@EntityScan(basePackages = {
+        "org.example.common.entity"        // Entity из common модуля
 })
 @EnableJpaRepositories(basePackages = "org.example.common.repository")  // ← это важно!
 @EnableAsync

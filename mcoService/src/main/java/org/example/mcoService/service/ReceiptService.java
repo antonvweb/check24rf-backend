@@ -171,7 +171,6 @@ public class ReceiptService {
      */
     private String bytesToString(byte[] jsonBytes) {
         return new String(jsonBytes, StandardCharsets.UTF_8);
-        // ✅ Просто преобразует байты в строку
     }
 
     /**

@@ -13,9 +13,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
         "org.example.mcoService"
 })
 @EntityScan(basePackages = {
-        "org.example.common.entity"        // Entity из common модуля
+        "org.example.common.entity",
+        "org.example.mcoService.entity"
 })
-@EnableJpaRepositories(basePackages = "org.example.common.repository")  // ← это важно!
+@EnableJpaRepositories(basePackages = {"org.example.common.repository", "org.example.mcoService.repository"})  // ← это важно!
 @EnableAsync
 @EnableConfigurationProperties(McoProperties.class)
 public class McoIntegrationApplication {

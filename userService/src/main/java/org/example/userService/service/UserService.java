@@ -54,17 +54,17 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден: " + userId));
         
-        // Получаем чеки пользователя из mcoService
-        List<ReceiptData> receipts = fetchUserReceipts(userId);
+//        // Получаем чеки пользователя из mcoService
+//        List<ReceiptData> receipts = fetchUserReceipts(userId);
         
-        // Рассчитываем статистику
-        UserStatistics statistics = calculateStatistics(receipts);
+//        // Рассчитываем статистику
+//        UserStatistics statistics = calculateStatistics(receipts);
         
         // Получаем последние 10 чеков
-        List<ReceiptSummary> recentReceipts = receipts.stream()
-                .limit(10)
-                .map(this::mapToReceiptSummary)
-                .collect(Collectors.toList());
+//        List<ReceiptSummary> recentReceipts = receipts.stream()
+//                .limit(10)
+//                .map(this::mapToReceiptSummary)
+//                .collect(Collectors.toList());
         
         return UserDetailResponse.builder()
                 .id(user.getId())
@@ -75,8 +75,7 @@ public class UserService {
                 .telegramChatId(user.getTelegramChatId())
                 .createdAt(user.getCreatedAt())
                 .isActive(user.isActive())
-                .statistics(statistics)
-                .recentReceipts(recentReceipts)
+                .isPartnerConnected(user.isPartnerConnected())
                 .build();
     }
 

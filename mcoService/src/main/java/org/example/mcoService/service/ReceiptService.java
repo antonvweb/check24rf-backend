@@ -112,7 +112,7 @@ public class ReceiptService {
      * Найти или создать пользователя
      */
     private User findOrCreateUser(String phoneNumber, String email) {
-        return userRepository.findByPhone(phoneNumber)
+        return userRepository.findByPhoneNumber(phoneNumber)
                 .orElseGet(() -> {
                     log.info("Создаем нового пользователя: {}", phoneNumber);
                     User newUser = User.builder()
@@ -185,7 +185,7 @@ public class ReceiptService {
      * Получить чеки пользователя по номеру телефона
      */
     public List<Receipt> getUserReceiptsByPhone(String phoneNumber) {
-        User user = userRepository.findByPhone(phoneNumber)
+        User user = userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден: " + phoneNumber));
         return receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(user.getId());
     }

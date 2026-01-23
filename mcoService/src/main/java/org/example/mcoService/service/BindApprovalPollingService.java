@@ -44,7 +44,7 @@ public class BindApprovalPollingService {
                             if ("REQUEST_APPROVED".equals(result)) {
                                 log.info("Заявка одобрена → обновляем пользователя по телефону {}", phone);
 
-                                userRepository.findByPhone(phone).ifPresentOrElse(   // ← пример улучшения
+                                userRepository.findByPhoneNumber(phone).ifPresentOrElse(   // ← пример улучшения
                                         user -> {
                                             user.setPartnerConnected(true);
                                             userRepository.save(user);

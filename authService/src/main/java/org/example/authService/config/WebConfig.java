@@ -1,6 +1,6 @@
 package org.example.authService.config;
 
-import org.example.authService.utils.CorsProperties;
+import org.example.common.utils.CorsProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

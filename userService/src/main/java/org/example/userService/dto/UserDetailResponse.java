@@ -28,6 +28,7 @@ public class UserDetailResponse {
     private String telegramChatId;
     private LocalDateTime createdAt;
     private boolean isActive;
+    private boolean isPartnerConnected;
     
     // Статистика по чекам
     private UserStatistics statistics;

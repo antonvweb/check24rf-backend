@@ -6,9 +6,11 @@ import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.api.*;
 import org.example.mcoService.dto.response.*;
 import org.example.mcoService.entity.Receipt;
+import org.example.mcoService.service.BindApprovalPollingService;
 import org.example.mcoService.service.McoService;
 import org.example.mcoService.service.ReceiptService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -26,6 +28,7 @@ public class McoController {
     private final McoService mcoService;
     private final McoProperties mcoProperties;
     private final ReceiptService receiptService;
+    private final BindApprovalPollingService pollingService;
 
     /**
      * Синхронизация чеков пользователя при заходе на сайт
@@ -312,9 +315,12 @@ public class McoController {
             @RequestParam(required = false, defaultValue = "DEFAULT") String permissionGroups) {
 
         try {
-            log.info("Подключение пользователя: {}", phone);
+            log.info("Подключение пользователя по телефону: {}", phone);
 
             String requestId = mcoService.connectUser(phone);
+
+            // Запускаем фоновую проверку статуса
+            pollingService.startPollingAndUpdateOnApproval(requestId, phone);
 
             CreateBindRequestDto data = CreateBindRequestDto.builder()
                     .requestId(requestId)
@@ -325,15 +331,12 @@ public class McoController {
                             "Для активации подключения пользователь должен одобрить заявку на сайте https://dr.stm-labs.ru/")
                     .build();
 
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Заявка на подключение создана успешно",
-                    data
-            ));
+            return ResponseEntity.ok(ApiResponse.success("Заявка на подключение создана успешно", data));
 
         } catch (Exception e) {
-            log.error("Ошибка подключения пользователя", e);
+            log.error("Ошибка при создании заявки на подключение", e);
             return ResponseEntity.status(500).body(
-                    ApiResponse.error("Ошибка подключения пользователя: " + e.getMessage())
+                    ApiResponse.error("Ошибка подключения: " + e.getMessage())
             );
         }
     }

@@ -23,7 +23,7 @@ public class BindRequestStatusDto {
 
     /**
      * Статус заявки:
-     * - WAIT - ожидает обработки пользователем
+     * - IN_PROGRESS - ожидает обработки пользователем
      * - REQUEST_APPROVED - одобрена пользователем
      * - REQUEST_REJECTED - отклонена пользователем
      * - REQUEST_EXPIRED - заявка истекла
@@ -83,9 +83,10 @@ public class BindRequestStatusDto {
         if (status == null) return null;
 
         return switch (status) {
-            case "WAIT" -> "Ожидает одобрения пользователем в ЛК МЧО";
+            case "IN_PROGRESS" -> "Ожидает одобрения пользователем в ЛК МЧО";
             case "REQUEST_APPROVED" -> "Одобрена - пользователь подключен к партнеру";
-            case "REQUEST_REJECTED" -> "Отклонена пользователем";
+            case "REQUEST_DECLINED" -> "Отклонена пользователем";
+            case "REQUEST_CANCELLED_AS_DUPLICATE" -> "Заявка отклонена по причине создания новой заявки";
             case "REQUEST_EXPIRED" -> "Заявка устарела";
             default -> "Неизвестный статус: " + status;
         };

@@ -17,6 +17,11 @@ spring:
     username: check_user
     password: YszGyMEZmV
     driver-class-name: org.postgresql.Driver
+  redis:
+    host: localhost
+    port: 6379
+    password: c4Ivgh
+    timeout: 2000
   jpa:
     hibernate:
       ddl-auto: update

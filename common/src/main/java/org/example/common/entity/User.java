@@ -1,4 +1,3 @@
-
 package org.example.common.entity;
 
 import jakarta.persistence.*;
@@ -41,5 +40,7 @@ public class User {
 
     @Column(name = "is_active")
     private boolean isActive;
-}
 
+    @Column(name = "is_partner_connected")
+    private boolean isPartnerConnected;
+}

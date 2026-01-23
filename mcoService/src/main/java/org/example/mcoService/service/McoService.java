@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.response.*;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -150,9 +152,7 @@ public class McoService {
         PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
 
         log.info("✅ Заявка на подключение отправлена");
-        log.info("   RequestId: {} - СОХРАНИТЕ ЕГО для проверки статуса!", requestId);
         log.info("   MessageId: {}", response.getMessageId());
-        log.info("   Проверить статус: GET /api/mco/bind-request-status?requestId={}", requestId);
 
         // ВАЖНО: возвращаем RequestId, а не MessageId!
         // RequestId нужен для метода GetBindPartnerStatusRequest

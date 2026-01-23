@@ -56,9 +56,10 @@ public class GetBindPartnerStatusResponse {
 
         /**
          * Результат запроса:
-         * - WAIT - ожидает обработки
+         * - IN_PROGRESS - ожидает обработки
          * - REQUEST_APPROVED - одобрена
-         * - REQUEST_REJECTED - отклонена
+         * - REQUEST_DECLINED - отклонена
+         * - REQUEST_CANCELLED_AS_DUPLICATE - отклонена
          * - REQUEST_EXPIRED - истекла
          */
         @JsonProperty("Result")

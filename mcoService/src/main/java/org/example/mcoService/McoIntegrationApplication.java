@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(scanBasePackages = {
-        "org.example.common"
+        "org.example.common",
+        "org.example.mcoService"
 })
 @EntityScan(basePackages = {
         "org.example.common.entity"        // Entity из common модуля

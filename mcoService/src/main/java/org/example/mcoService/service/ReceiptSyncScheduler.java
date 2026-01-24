@@ -24,7 +24,6 @@ public class ReceiptSyncScheduler {
     public void syncReceiptsForAllConnectedUsers() {
         log.info("=== ЗАПУСК ПЕРИОДИЧЕСКОЙ СИНХРОНИЗАЦИИ ЧЕКОВ ===");
 
-        // ← ИСПОЛЬЗУЙТЕ НОВЫЙ МЕТОД
         List<String> connectedPhones = userRepository.findAllConnectedToPartner().stream()
                 .map(User::getPhoneNumber)
                 .toList();

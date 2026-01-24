@@ -29,43 +29,4 @@ public class UserDetailResponse {
     private LocalDateTime createdAt;
     private boolean isActive;
     private boolean isPartnerConnected;
-    
-    // Статистика по чекам
-    private UserStatistics statistics;
-    
-    // Последние чеки (например, 10 последних)
-    private List<ReceiptSummary> recentReceipts;
-    
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class UserStatistics {
-        private long totalReceiptsCount;        // Всего чеков
-        private BigDecimal totalAmount;         // Общая сумма покупок
-        private BigDecimal averageAmount;       // Средний чек
-        private BigDecimal maxAmount;           // Максимальный чек
-        private BigDecimal minAmount;           // Минимальный чек
-        private LocalDateTime firstReceiptDate; // Дата первого чека
-        private LocalDateTime lastReceiptDate;  // Дата последнего чека
-        private long receiptsThisMonth;         // Чеков в этом месяце
-        private BigDecimal amountThisMonth;     // Сумма в этом месяце
-        private long receiptsThisYear;          // Чеков в этом году
-        private BigDecimal amountThisYear;      // Сумма в этом году
-    }
-    
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ReceiptSummary {
-        private UUID id;
-        private String fiscalDriveNumber;
-        private Long fiscalDocumentNumber;
-        private Long fiscalSign;
-        private LocalDateTime receiptDateTime;
-        private BigDecimal totalSum;
-        private String retailPlace;
-        private String sourceCode;
-    }
 }

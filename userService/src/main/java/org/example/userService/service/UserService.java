@@ -7,8 +7,6 @@ import org.example.common.entity.User;
 import org.example.common.repository.UserRepository;
 import org.example.common.security.JwtUtil;
 import org.example.userService.dto.*;
-import org.example.userService.dto.UserDetailResponse.ReceiptSummary;
-import org.example.userService.dto.UserDetailResponse.UserStatistics;
 import org.example.userService.dto.UserListResponse.PaginationInfo;
 import org.example.userService.dto.UserListResponse.UserSummary;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,18 +52,6 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден: " + userId));
         
-        // Получаем чеки пользователя из mcoService
-        List<ReceiptData> receipts = fetchUserReceipts(userId);
-        
-        // Рассчитываем статистику
-        UserStatistics statistics = calculateStatistics(receipts);
-        
-        // Получаем последние 10 чеков
-        List<ReceiptSummary> recentReceipts = receipts.stream()
-                .limit(10)
-                .map(this::mapToReceiptSummary)
-                .collect(Collectors.toList());
-        
         return UserDetailResponse.builder()
                 .id(user.getId())
                 .phoneNumber(user.getPhoneNumber())
@@ -76,8 +62,6 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .isActive(user.isActive())
                 .isPartnerConnected(user.isPartnerConnected())
-                .statistics(statistics)
-                .recentReceipts(recentReceipts)
                 .build();
     }
 
@@ -343,99 +327,6 @@ public class UserService {
         } catch (Exception e) {
             return 0L;
         }
-    }
-
-    /**
-     * Рассчитать статистику по чекам
-     */
-    private UserStatistics calculateStatistics(List<ReceiptData> receipts) {
-        if (receipts.isEmpty()) {
-            return UserStatistics.builder()
-                    .totalReceiptsCount(0)
-                    .totalAmount(BigDecimal.ZERO)
-                    .averageAmount(BigDecimal.ZERO)
-                    .maxAmount(BigDecimal.ZERO)
-                    .minAmount(BigDecimal.ZERO)
-                    .receiptsThisMonth(0)
-                    .amountThisMonth(BigDecimal.ZERO)
-                    .receiptsThisYear(0)
-                    .amountThisYear(BigDecimal.ZERO)
-                    .build();
-        }
-        
-        BigDecimal totalAmount = receipts.stream()
-                .map(r -> r.totalSum)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        BigDecimal averageAmount = totalAmount
-                .divide(BigDecimal.valueOf(receipts.size()), 2, RoundingMode.HALF_UP);
-        
-        BigDecimal maxAmount = receipts.stream()
-                .map(r -> r.totalSum)
-                .max(BigDecimal::compareTo)
-                .orElse(BigDecimal.ZERO);
-        
-        BigDecimal minAmount = receipts.stream()
-                .map(r -> r.totalSum)
-                .min(BigDecimal::compareTo)
-                .orElse(BigDecimal.ZERO);
-        
-        LocalDateTime firstDate = receipts.stream()
-                .map(r -> r.receiptDateTime)
-                .min(LocalDateTime::compareTo)
-                .orElse(null);
-        
-        LocalDateTime lastDate = receipts.stream()
-                .map(r -> r.receiptDateTime)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
-        
-        YearMonth currentMonth = YearMonth.now();
-        long receiptsThisMonth = receipts.stream()
-                .filter(r -> YearMonth.from(r.receiptDateTime).equals(currentMonth))
-                .count();
-        
-        BigDecimal amountThisMonth = receipts.stream()
-                .filter(r -> YearMonth.from(r.receiptDateTime).equals(currentMonth))
-                .map(r -> r.totalSum)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        int currentYear = LocalDateTime.now().getYear();
-        long receiptsThisYear = receipts.stream()
-                .filter(r -> r.receiptDateTime.getYear() == currentYear)
-                .count();
-        
-        BigDecimal amountThisYear = receipts.stream()
-                .filter(r -> r.receiptDateTime.getYear() == currentYear)
-                .map(r -> r.totalSum)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        return UserStatistics.builder()
-                .totalReceiptsCount(receipts.size())
-                .totalAmount(totalAmount)
-                .averageAmount(averageAmount)
-                .maxAmount(maxAmount)
-                .minAmount(minAmount)
-                .firstReceiptDate(firstDate)
-                .lastReceiptDate(lastDate)
-                .receiptsThisMonth(receiptsThisMonth)
-                .amountThisMonth(amountThisMonth)
-                .receiptsThisYear(receiptsThisYear)
-                .amountThisYear(amountThisYear)
-                .build();
-    }
-
-    private ReceiptSummary mapToReceiptSummary(ReceiptData data) {
-        return ReceiptSummary.builder()
-                .id(data.id)
-                .fiscalDriveNumber(data.fiscalDriveNumber)
-                .fiscalDocumentNumber(data.fiscalDocumentNumber)
-                .fiscalSign(data.fiscalSign)
-                .receiptDateTime(data.receiptDateTime)
-                .totalSum(data.totalSum)
-                .retailPlace(data.retailPlace)
-                .sourceCode(data.sourceCode)
-                .build();
     }
 
     private UserReceiptsResponse.ReceiptDetail mapToReceiptDetail(ReceiptData data) {

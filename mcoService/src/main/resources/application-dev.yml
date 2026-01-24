@@ -2,6 +2,10 @@ server:
   port: 8085
   address: 0.0.0.0
 
+smartcaptcha:
+  server-key: ${SMARTCAPTCHA_SERVER_KEY:ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f}
+  validate-url: https://smartcaptcha.yandexcloud.net/validate
+
 spring:
   webflux:
     timeout:
@@ -27,26 +31,75 @@ spring:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
+cors:
+  allowed-origins:
+    - "http://172.16.0.1:3000"
+    - "http://95.213.143.142"
+    - "https://чек24.рф"
+    - "https://www.чек24.рф"
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+    - "https://api.чек24.рф"
+    - "https://api.xn--24-mlcu7d.xn--p1ai"
+
+jwt:
+  secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
+  access-token:
+    expiration: 3600000  # 1 час
+  refresh-token:
+    expiration: 604800000  # 7 дней
+
+security:
+  captcha:
+    enabled: true
+    required-endpoints:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/contact/submit
+
+# Конфигурация для интеграции с МЧО (Мои Чеки Онлайн)
 mco:
   api:
+    # ⚠️ ВАЖНО: Для тестового стенда (разработка)
     base-url: https://dr.stm-labs.ru:32355/ais3/smz/SmzIntegrationService
+
+    # ⚠️ ВАЖНО: Для промышленного контура (КПЭ) заменить на:
+    # base-url: https://openapi.nalog.ru:8090/open-api/ais3/DrPartnersIntegrationService/0.1
+
+    # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
+    # Заменить на реальный токен из письма от ФНС
     token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
     user-token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
-    timeout: 60000
+
+    # Таймаут для SOAP запросов (в миллисекундах)
+    timeout: 60000  # Увеличено до 60 секунд для медленных запросов
 
   partner:
+    # ИНН организации-партнера (из заявки в ФНС)
     inn: "5610238469"
+
+    # Название партнера для отображения в ЛК МЧО
     name: "ЧЕК24.РФ"
+
+    # Тип партнера (всегда PARTNER для платформ-партнеров)
     type: "PARTNER"
 
+# Логирование для отладки
 logging:
   level:
+    # Логи вашего приложения
     org.example.mcoService: DEBUG
+
+    # HTTP клиент (для просмотра HTTP запросов/ответов)
     org.apache.http: DEBUG
     org.apache.http.wire: DEBUG
+
+    # Spring WS (для просмотра SOAP сообщений)
     org.springframework.ws: DEBUG
     org.springframework.ws.client: DEBUG
     org.springframework.ws.client.MessageTracing.sent: DEBUG
     org.springframework.ws.client.MessageTracing.received: DEBUG
     org.springframework.ws.server.MessageTracing: DEBUG
+
+    # JAXB marshalling
     org.springframework.oxm: DEBUG

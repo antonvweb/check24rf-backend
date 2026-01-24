@@ -1,7 +1,7 @@
 package org.example.mcoService.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -9,15 +9,12 @@ import java.time.Duration;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ReceiptMarkerService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
     private static final String MARKER_KEY_PREFIX = "receipt:marker:";
-
-    public ReceiptMarkerService(@Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     public void saveMarker(String phoneNumber, String marker) {
         String key = MARKER_KEY_PREFIX + phoneNumber;

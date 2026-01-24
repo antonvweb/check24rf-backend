@@ -1,5 +1,6 @@
 package org.example.mcoService.entity;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,6 +73,7 @@ public class Receipt {
     // JSONB для хранения полного JSON чека
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_json", nullable = false, columnDefinition = "jsonb")
+    @JsonRawValue
     private String rawJson;
 
     // Служебные поля

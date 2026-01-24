@@ -2,16 +2,16 @@ package org.example.mcoService.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.common.repository.UserRepository;
-import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.api.*;
 import org.example.mcoService.dto.response.*;
-import org.example.mcoService.entity.Receipt;
 import org.example.mcoService.service.BindApprovalPollingService;
 import org.example.mcoService.service.McoService;
 import org.example.mcoService.service.ReceiptService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -27,77 +27,32 @@ import java.util.stream.Collectors;
 public class McoController {
 
     private final McoService mcoService;
-    private final McoProperties mcoProperties;
     private final ReceiptService receiptService;
     private final BindApprovalPollingService pollingService;
-    private final UserRepository userRepository;
 
     /**
-     * Синхронизация чеков пользователя при заходе на сайт
-     * GET /api/mco/receipts/sync-user?phone=79054455906
-     */
-    @GetMapping("/receipts/sync-user")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> syncUserReceipts(
-            @RequestParam String phone) {
-
-        try {
-            log.info(">>> СИНХРОНИЗАЦИЯ ЧЕКОВ ДЛЯ ПОЛЬЗОВАТЕЛЯ: {} <<<", phone);
-
-            // 1. Проверяем, подключен ли пользователь
-            var user = userRepository.findByPhoneNumber(phone)
-                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-
-            if (!user.isPartnerConnected()) {
-                return ResponseEntity.ok(ApiResponse.success(
-                        "Пользователь не подключен к партнеру",
-                        Map.of("receipts", List.of(), "totalReceipts", 0)
-                ));
-            }
-
-            // 2. Получаем свежие чеки от MCO API
-            GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker("S_FROM_END");
-
-            // 3. Синхронизируем чеки пользователя с БД
-            int newReceiptsCount = receiptService.syncUserReceipts(phone,
-                    response.getReceipts() != null ? response.getReceipts() : List.of());
-
-            // 4. Получаем все чеки пользователя из БД
-            List<Receipt> userReceipts = receiptService.getUserReceiptsByPhone(phone);
-
-            Map<String, Object> data = Map.of(
-                    "newReceiptsAdded", newReceiptsCount,
-                    "totalReceipts", userReceipts.size(),
-                    "receipts", userReceipts
-            );
-
-            String message = newReceiptsCount > 0
-                    ? String.format("Добавлено %d новых чеков", newReceiptsCount)
-                    : "Новых чеков нет";
-
-            return ResponseEntity.ok(ApiResponse.success(message, data));
-
-        } catch (Exception e) {
-            log.error("Ошибка синхронизации чеков пользователя {}", phone, e);
-            return ResponseEntity.status(500).body(
-                    ApiResponse.error("Ошибка синхронизации: " + e.getMessage())
-            );
-        }
-    }
-
-    /**
-     * Получить чеки пользователя из БД
-     * GET /api/mco/receipts/user?phone=79054455906
+     * Получить чеки пользователя из БД с пагинацией
+     * GET /api/mco/receipts/user?phone=79054455906&page=0&size=20
+     * Опционально: &sort=receiptDateTime,asc (но у тебя descending по умолчанию)
      */
     @GetMapping("/receipts/user")
-    public ResponseEntity<ApiResponse<List<Receipt>>> getUserReceipts(
-            @RequestParam String phone) {
+    public ResponseEntity<ApiResponse<Page<ReceiptDto>>> getUserReceipts(
+            @RequestParam String phone,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sort) {  // опционально
 
         try {
-            List<Receipt> receipts = receiptService.getUserReceiptsByPhone(phone);
+            Pageable pageable = PageRequest.of(page, size, Sort.by("receiptDateTime").descending());
+
+            Page<ReceiptDto> receiptsPage = receiptService.getUserReceiptsByPhone(phone, pageable);
 
             return ResponseEntity.ok(ApiResponse.success(
-                    String.format("Найдено чеков: %d", receipts.size()),
-                    receipts
+                    String.format("Найдено чеков: %d (страница %d из %d)",
+                            receiptsPage.getTotalElements(),
+                            receiptsPage.getNumber(),
+                            receiptsPage.getTotalPages()),
+                    receiptsPage
             ));
 
         } catch (Exception e) {
@@ -190,7 +145,7 @@ public class McoController {
      *   "shortMessage": "20% скидка для вас",
      *   "category": "CASHBACK",
      *   "externalItemId": "PROMO123",
-     *   "externalItemUrl": "https://example.com/promo"
+     *   "externalItemUrl": "<a href="https://example.com/promo"></a>"
      * }
      */
     @PostMapping("/send-notification")

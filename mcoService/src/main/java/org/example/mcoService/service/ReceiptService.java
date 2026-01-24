@@ -4,20 +4,23 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.mcoService.dto.api.ReceiptDto;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.entity.Receipt;
 import org.example.common.entity.User;
 import org.example.mcoService.repository.ReceiptRepository;
 import org.example.common.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -145,7 +148,7 @@ public class ReceiptService {
 
         // Сумма в копейках -> рубли
         BigDecimal totalSum = BigDecimal.valueOf(jsonNode.get("totalSum").asLong())
-                .divide(BigDecimal.valueOf(100));
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
         return Receipt.builder()
                 .userId(userId)
@@ -174,18 +177,32 @@ public class ReceiptService {
     }
 
     /**
-     * Получить все чеки пользователя
-     */
-    public List<Receipt> getUserReceipts(UUID userId) {
-        return receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(userId);
-    }
-
-    /**
      * Получить чеки пользователя по номеру телефона
      */
-    public List<Receipt> getUserReceiptsByPhone(String phoneNumber) {
+    public Page<ReceiptDto> getUserReceiptsByPhone(String phoneNumber, Pageable pageable) {
         User user = userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден: " + phoneNumber));
-        return receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(user.getId());
+
+        Page<Receipt> page = receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(user.getId(), pageable);
+
+        return page.map(this::toDto);  // ← конвертация
+    }
+
+    private ReceiptDto toDto(Receipt receipt) {
+        return new ReceiptDto(
+                receipt.getPhone(),
+                receipt.getEmail(),
+                receipt.getFiscalSign(),
+                receipt.getFiscalDocumentNumber(),
+                receipt.getFiscalDriveNumber(),
+                receipt.getReceiptDateTime(),
+                receipt.getReceiveDate(),
+                receipt.getTotalSum(),
+                receipt.getSourceCode(),
+                receipt.getOperationType(),
+                receipt.getUserInn(),
+                receipt.getRetailPlace(),
+                receipt.getRawJson()
+        );
     }
 }

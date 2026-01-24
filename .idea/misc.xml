@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <list size="12">
+    <list size="14">
       <item index="0" class="java.lang.String" itemvalue="jakarta.persistence.Column" />
       <item index="1" class="java.lang.String" itemvalue="jakarta.persistence.GeneratedValue" />
       <item index="2" class="java.lang.String" itemvalue="jakarta.persistence.PrePersist" />
-      <item index="3" class="java.lang.String" itemvalue="org.springframework.context.annotation.Bean" />
-      <item index="4" class="java.lang.String" itemvalue="org.springframework.context.annotation.Configuration" />
-      <item index="5" class="java.lang.String" itemvalue="org.springframework.scheduling.annotation.Scheduled" />
-      <item index="6" class="java.lang.String" itemvalue="org.springframework.stereotype.Service" />
-      <item index="7" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.ExceptionHandler" />
-      <item index="8" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.GetMapping" />
-      <item index="9" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.PostMapping" />
-      <item index="10" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.RestController" />
-      <item index="11" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.RestControllerAdvice" />
+      <item index="3" class="java.lang.String" itemvalue="jakarta.persistence.PreUpdate" />
+      <item index="4" class="java.lang.String" itemvalue="org.springframework.context.annotation.Bean" />
+      <item index="5" class="java.lang.String" itemvalue="org.springframework.context.annotation.Configuration" />
+      <item index="6" class="java.lang.String" itemvalue="org.springframework.scheduling.annotation.Scheduled" />
+      <item index="7" class="java.lang.String" itemvalue="org.springframework.stereotype.Service" />
+      <item index="8" class="java.lang.String" itemvalue="org.springframework.transaction.annotation.Transactional" />
+      <item index="9" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.ExceptionHandler" />
+      <item index="10" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.GetMapping" />
+      <item index="11" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.PostMapping" />
+      <item index="12" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.RestController" />
+      <item index="13" class="java.lang.String" itemvalue="org.springframework.web.bind.annotation.RestControllerAdvice" />
     </list>
     <writeAnnotations>
       <writeAnnotation name="jakarta.persistence.Column" />

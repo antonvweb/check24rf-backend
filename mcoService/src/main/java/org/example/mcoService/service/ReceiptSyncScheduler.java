@@ -22,29 +22,28 @@ public class ReceiptSyncScheduler {
 
     @Scheduled(fixedDelay = 300_000)
     public void syncReceiptsForAllConnectedUsers() {
-        log.info("=== ?????? ????????????? ????????????? ????? ===");
+        log.info("=== ЗАПУСК ПЕРИОДИЧЕСКОЙ СИНХРОНИЗАЦИИ ЧЕКОВ ===");
 
         List<String> connectedPhones = userRepository.findAllConnectedToPartner().stream()
                 .map(User::getPhoneNumber)
                 .toList();
 
-        log.info("??????? {} ???????????? ?????????????", connectedPhones.size());
+        log.info("Найдено {} подключенных пользователей", connectedPhones.size());
 
         for (String phone : connectedPhones) {
             try {
                 syncReceiptsForUser(phone);
             } catch (Exception e) {
-                log.error("?????? ????????????? ??? {}: {}", phone, e.getMessage());
+                log.error("Ошибка синхронизации для {}: {}", phone, e.getMessage());
             }
         }
-
-        log.info("=== ????????????? ????????? ===");
+        log.info("=== СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА ===");
     }
 
     private void syncReceiptsForUser(String phone) {
         String marker = markerService.getMarker(phone);
 
-        log.debug("????????????? ????? ??? {} ? ???????? {}", phone, marker);
+        log.debug("Синхронизация чеков для {} с маркером {}", phone, marker);
 
         GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker(marker);
 
@@ -54,7 +53,7 @@ public class ReceiptSyncScheduler {
                     .toList();
 
             int saved = receiptService.saveReceipts(userReceipts);
-            log.info("???????????????? {} ????? ????? ??? {}", saved, phone);
+            log.info("Синхронизировано {} новых чеков для {}", saved, phone);
         }
 
         if (response.getNextMarker() != null) {

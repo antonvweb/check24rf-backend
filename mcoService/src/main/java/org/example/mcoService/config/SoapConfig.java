@@ -57,13 +57,13 @@ public class SoapConfig {
                     SoapMessage message = (SoapMessage) messageContext.getRequest();
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
-                    String request = out.toString("UTF-8");
+//                    String request = out.toString("UTF-8");
 
                     String timestamp = LocalDateTime.now().format(FORMATTER);
                     String filename = "soap-request-" + timestamp + ".xml";
 
-                    log.info("=== SOAP REQUEST ===\n{}", request);
-                    Files.write(Paths.get(filename), request.getBytes());
+//                    log.info("=== SOAP REQUEST ===\n{}", request);
+//                    Files.write(Paths.get(filename), request.getBytes());
                     log.info("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging request", e);
@@ -77,13 +77,13 @@ public class SoapConfig {
                     SoapMessage message = (SoapMessage) messageContext.getResponse();
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
-                    String response = out.toString("UTF-8");
+//                    String response = out.toString("UTF-8");
 
                     String timestamp = LocalDateTime.now().format(FORMATTER);
                     String filename = "soap-response-" + timestamp + ".xml";
 
-                    log.info("=== SOAP RESPONSE ===\n{}", response);
-                    Files.write(Paths.get(filename), response.getBytes());
+//                    log.info("=== SOAP RESPONSE ===\n{}", response);
+//                    Files.write(Paths.get(filename), response.getBytes());
                     log.info("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging response", e);
@@ -97,13 +97,13 @@ public class SoapConfig {
                     SoapMessage message = (SoapMessage) messageContext.getResponse();
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     message.writeTo(out);
-                    String fault = out.toString("UTF-8");
+//                    String fault = out.toString("UTF-8");
 
                     String timestamp = LocalDateTime.now().format(FORMATTER);
                     String filename = "soap-fault-" + timestamp + ".xml";
 
-                    log.error("=== SOAP FAULT ===\n{}", fault);
-                    Files.write(Paths.get(filename), fault.getBytes());
+//                    log.error("=== SOAP FAULT ===\n{}", fault);
+//                    Files.write(Paths.get(filename), fault.getBytes());
                     log.error("Сохранено в файл: {}", filename);
                 } catch (Exception e) {
                     log.error("Error logging fault", e);

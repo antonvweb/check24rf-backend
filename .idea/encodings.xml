@@ -14,6 +14,7 @@
     <file url="file://$PROJECT_DIR$/checkService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/checkService/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/mcoService/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/mcoService/src/main/java/org/example/mcoService/service/ReceiptSyncScheduler.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/mcoService/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/notificationService/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/notificationService/src/main/resources" charset="UTF-8" />

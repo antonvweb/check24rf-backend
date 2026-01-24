@@ -53,7 +53,6 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден: " + userId));
         
         return UserDetailResponse.builder()
-                .id(user.getId())
                 .phoneNumber(user.getPhoneNumber())
                 .phoneNumberAlt(user.getPhoneNumberAlt())
                 .email(user.getEmail())
@@ -331,7 +330,6 @@ public class UserService {
 
     private UserReceiptsResponse.ReceiptDetail mapToReceiptDetail(ReceiptData data) {
         return UserReceiptsResponse.ReceiptDetail.builder()
-                .id(data.id)
                 .fiscalDriveNumber(data.fiscalDriveNumber)
                 .fiscalDocumentNumber(data.fiscalDocumentNumber)
                 .fiscalSign(data.fiscalSign)

@@ -18,9 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserDetailResponse {
-    
-    // Основная информация
-    private UUID id;
+
     private String phoneNumber;
     private String phoneNumberAlt;
     private String email;

@@ -1,4 +1,3 @@
-
 package org.example.common.entity;
 
 import jakarta.persistence.*;
@@ -40,8 +39,15 @@ public class User {
     private LocalDateTime createdAt;
 
     @Column(name = "is_active")
-    private boolean isActive;
+    private boolean isActive = true; // ← добавьте значение по умолчанию
 
     @Column(name = "is_partner_connected")
-    private boolean isPartnerConnected;
+    private boolean isPartnerConnected = false; // ← добавьте значение по умолчанию
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

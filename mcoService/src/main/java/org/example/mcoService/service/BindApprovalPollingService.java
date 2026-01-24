@@ -4,14 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
 import org.example.common.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import java.time.Instant;
-import java.time.Duration;
-
-import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -21,67 +15,51 @@ public class BindApprovalPollingService {
     private final McoService mcoService;
     private final UserRepository userRepository;
 
-    // Вот здесь он уже пришёл через Spring (по имени бина)
-    @Qualifier("mcoPollingExecutor")
-    private final TaskExecutor taskExecutor;
-
+    @Async
     public void startPollingAndUpdateOnApproval(String requestId, String phone) {
+        log.info("Запуск фонового опроса статуса заявки {} для пользователя {}", requestId, phone);
 
-        // ← Самое важное место: передаём taskExecutor вторым аргументом
-        CompletableFuture.runAsync(() -> {
+        int maxAttempts = 12; // 12 попыток * 30 сек = 6 минут
+        int attempt = 0;
 
-                    Instant now = Instant.now();
-                    Instant deadline = now.plus(Duration.ofMinutes(6));
+        while (attempt < maxAttempts) {
+            try {
+                attempt++;
+                Thread.sleep(30_000); // 30 секунд
 
-                    while (Instant.now().isBefore(deadline)) {
+                log.debug("Попытка {}/{} проверки статуса заявки {}", attempt, maxAttempts, requestId);
 
-                        try {
-                            GetBindPartnerStatusResponse.BindPartnerStatus status =
-                                    mcoService.checkBindRequestStatus(requestId);
+                GetBindPartnerStatusResponse.BindPartnerStatus status =
+                        mcoService.checkBindRequestStatus(requestId);
 
-                            String result = status != null ? status.getResult() : null;
+                String result = status != null ? status.getResult() : null;
 
-                            if ("REQUEST_APPROVED".equals(result)) {
-                                log.info("Заявка одобрена → обновляем пользователя по телефону {}", phone);
+                if ("REQUEST_APPROVED".equals(result)) {
+                    log.info("✅ Заявка {} одобрена! Обновляем статус пользователя {}", requestId, phone);
 
-                                userRepository.findByPhoneNumber(phone).ifPresentOrElse(   // ← пример улучшения
-                                        user -> {
-                                            user.setPartnerConnected(true);
-                                            userRepository.save(user);
-                                            log.info("Пользователь {} → partnerConnected = true (requestId: {})", phone, requestId);
-                                        },
-                                        () -> log.warn("Пользователь с телефоном {} не найден в БД", phone)
-                                );
+                    userRepository.findByPhoneNumber(phone).ifPresent(user -> {
+                        user.setPartnerConnected(true);
+                        userRepository.save(user);
+                        log.info("Статус партнерского подключения обновлен для пользователя {}", phone);
+                    });
 
-                                return;
-                            }
+                    return; // Завершаем опрос
 
-                            if (isFinalStatus(result)) {
-                                log.info("Заявка в финальном состоянии {}, больше не опрашиваем: {}", result, requestId);
-                                return;
-                            }
+                } else if (isFinalStatus(result)) {
+                    log.warn("Заявка {} завершена со статусом: {}", requestId, result);
+                    return;
+                }
 
-                        } catch (Exception e) {
-                            log.warn("Ошибка проверки статуса заявки {}: {}", requestId, e.getMessage(), e);
-                        }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Опрос прерван для заявки {}", requestId);
+                return;
+            } catch (Exception e) {
+                log.error("Ошибка при проверке статуса заявки {}: {}", requestId, e.getMessage());
+            }
+        }
 
-                        try {
-                            Thread.sleep(10_000);
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            log.warn("Polling прерван для заявки {}", requestId);
-                            return;
-                        }
-                    }
-
-                    log.info("Таймаут 6 минут истёк, статус не стал APPROVED для заявки {}", requestId);
-
-                }, taskExecutor)   // ← вот здесь используется!
-
-                .exceptionally(ex -> {
-                    log.error("Polling задача упала для requestId {}: {}", requestId, ex.getMessage(), ex);
-                    return null;
-                });
+        log.warn("⏱️ Таймаут опроса для заявки {} (6 минут истекло)", requestId);
     }
 
     private boolean isFinalStatus(String result) {

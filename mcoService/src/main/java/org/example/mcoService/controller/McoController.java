@@ -2,6 +2,7 @@ package org.example.mcoService.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.common.repository.UserRepository;
 import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.api.*;
 import org.example.mcoService.dto.response.*;
@@ -29,6 +30,7 @@ public class McoController {
     private final McoProperties mcoProperties;
     private final ReceiptService receiptService;
     private final BindApprovalPollingService pollingService;
+    private final UserRepository userRepository;
 
     /**
      * Синхронизация чеков пользователя при заходе на сайт
@@ -41,14 +43,25 @@ public class McoController {
         try {
             log.info(">>> СИНХРОНИЗАЦИЯ ЧЕКОВ ДЛЯ ПОЛЬЗОВАТЕЛЯ: {} <<<", phone);
 
-            // 1. Получаем свежие чеки от MCO API
+            // 1. Проверяем, подключен ли пользователь
+            var user = userRepository.findByPhoneNumber(phone)
+                    .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+            if (!user.isPartnerConnected()) {
+                return ResponseEntity.ok(ApiResponse.success(
+                        "Пользователь не подключен к партнеру",
+                        Map.of("receipts", List.of(), "totalReceipts", 0)
+                ));
+            }
+
+            // 2. Получаем свежие чеки от MCO API
             GetReceiptsTapeResponse response = mcoService.getReceiptsByMarker("S_FROM_END");
 
-            // 2. Синхронизируем чеки пользователя с БД
+            // 3. Синхронизируем чеки пользователя с БД
             int newReceiptsCount = receiptService.syncUserReceipts(phone,
                     response.getReceipts() != null ? response.getReceipts() : List.of());
 
-            // 3. Получаем все чеки пользователя из БД
+            // 4. Получаем все чеки пользователя из БД
             List<Receipt> userReceipts = receiptService.getUserReceiptsByPhone(phone);
 
             Map<String, Object> data = Map.of(
@@ -319,7 +332,6 @@ public class McoController {
 
             String requestId = mcoService.connectUser(phone);
 
-            // Запускаем фоновую проверку статуса
             pollingService.startPollingAndUpdateOnApproval(requestId, phone);
 
             CreateBindRequestDto data = CreateBindRequestDto.builder()

@@ -132,8 +132,6 @@ public class McoService {
         // Проверяем, что количество полученных статусов соответствует запрошенному
         if (statuses.size() < requestIds.size()) {
             log.warn("Получено только {} статусов из {} запрошенных", statuses.size(), requestIds.size());
-            // Можно выбросить исключение или вернуть частичный результат
-            // Здесь выбрасываем бизнес-исключение для прозрачности
             throw new BusinessMcoException(
                     McoErrorCode.PARTIAL_REQUESTS_NOT_FOUND,
                     String.format("Получено только %d статусов из %d запрошенных (некоторые заявки не найдены)",

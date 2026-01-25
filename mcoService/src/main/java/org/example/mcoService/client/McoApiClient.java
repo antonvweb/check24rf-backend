@@ -19,21 +19,10 @@ public class McoApiClient {
     @Autowired
     private McoSoapClient soapClient;
 
-    // ============================================
-// МЕТОДЫ ДЛЯ ПРОВЕРКИ СТАТУСА ЗАЯВОК
-// Добавить эти методы в конец класса McoApiClient
-// ============================================
-
-    /**
-     * Получение статуса заявок на подключение пользователей
-     *
-     * @param requestIds список RequestId заявок (до 50 штук)
-     * @return ответ со статусами заявок
-     */
     public GetBindPartnerStatusResponse getBindRequestStatus(List<String> requestIds) {
         log.info("Запрос статуса заявок, количество: {}", requestIds.size());
 
-        if (requestIds == null || requestIds.isEmpty()) {
+        if (requestIds.isEmpty()) {
             throw new IllegalArgumentException("Список requestIds не может быть пустым");
         }
 
@@ -56,16 +45,10 @@ public class McoApiClient {
         );
     }
 
-    /**
-     * СИНХРОННОЕ получение статуса заявок с автоматическим опросом результата
-     *
-     * @param requestIds список RequestId заявок (до 50 штук)
-     * @return ответ со статусами заявок
-     */
     public GetBindPartnerStatusResponse getBindRequestStatusSync(List<String> requestIds) {
-        log.info(">>> Синхронный запрос статуса заявок, количество: {}", requestIds.size());
+        log.info("Синхронный запрос статуса заявок, количество: {}", requestIds.size());
 
-        if (requestIds == null || requestIds.isEmpty()) {
+        if (requestIds.isEmpty()) {
             throw new IllegalArgumentException("Список requestIds не может быть пустым");
         }
 
@@ -73,17 +56,14 @@ public class McoApiClient {
             throw new IllegalArgumentException("Максимум 50 requestIds за один запрос");
         }
 
-        // Создаем внутренний запрос
         GetBindPartnerStatusRequest innerRequest = GetBindPartnerStatusRequest.builder()
                 .requestIds(requestIds)
                 .build();
 
-        // Оборачиваем в SendMessageRequest
         SendMessageRequest request = SendMessageRequest.builder()
                 .message(new SendMessageRequest.MessageWrapper(innerRequest))
                 .build();
 
-        // Отправляем асинхронный запрос
         SendMessageResponse messageResponse = soapClient.sendSoapRequest(
                 request,
                 SendMessageResponse.class,
@@ -94,18 +74,17 @@ public class McoApiClient {
                 messageResponse.getMessageId());
 
         try {
-            // Опрашиваем результат
             GetBindPartnerStatusResponse response = soapClient.getAsyncResult(
                     messageResponse.getMessageId(),
                     GetBindPartnerStatusResponse.class
             );
 
             int statusesCount = response.getStatuses() != null ? response.getStatuses().size() : 0;
-            log.info("✅ Получено статусов: {}", statusesCount);
+            log.info("Получено статусов: {}", statusesCount);
 
             if (response.getStatuses() != null) {
                 response.getStatuses().forEach(status -> {
-                    log.info("  RequestId: {}, Result: {}, UserIdentifier: {}",
+                    log.info("RequestId: {}, Result: {}, UserIdentifier: {}",
                             status.getRequestId(),
                             status.getResult(),
                             status.getUserIdentifier());
@@ -128,13 +107,12 @@ public class McoApiClient {
             String inn,
             String phone) {
 
-        log.info("=== НАЧАЛО РЕГИСТРАЦИИ ===");
-        log.info("name: [{}]", name);
-        log.info("name length: {}", name != null ? name.length() : "null");
-        log.info("name bytes: {}", name != null ? java.util.Arrays.toString(name.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : "null");
-        log.info("type: PARTNER");
-        log.info("inn: {}", inn);
-        log.info("phone: {}", phone);
+        log.info("Начало регистрации партнера");
+        log.info("Имя партнера: [{}]", name);
+        log.info("Длина имени: {}", name != null ? name.length() : "null");
+        log.info("Тип: PARTNER");
+        log.info("ИНН: {}", inn);
+        log.info("Телефон: {}", phone);
 
         PostPlatformRegistrationRequest innerRequest = PostPlatformRegistrationRequest.builder()
                 .name(name)
@@ -148,7 +126,7 @@ public class McoApiClient {
                 .phone(phone)
                 .build();
 
-        log.info("=== СОЗДАН ОБЪЕКТ ===");
+        log.info("Создан объект PostPlatformRegistrationRequest");
         log.info("innerRequest.name: [{}]", innerRequest.getName());
 
         SendMessageRequest request = SendMessageRequest.builder()
@@ -175,7 +153,6 @@ public class McoApiClient {
 
         log.info("Регистрация партнера: {}", name);
 
-        // Отправляем запрос
         SendMessageResponse messageResponse = registerPartner(
                 name, description, transitionLink, base64Logo, inn, phone
         );
@@ -183,7 +160,6 @@ public class McoApiClient {
         log.info("Получен MessageId: {}, ожидаем результата...", messageResponse.getMessageId());
 
         try {
-            // Опрашиваем результат
             PostPlatformRegistrationResponse response =
                     soapClient.getAsyncResult(
                             messageResponse.getMessageId(),
@@ -211,8 +187,7 @@ public class McoApiClient {
                 .requireNoActiveRequests(false)
                 .build();
 
-        // ←←← ВОТ СЮДА ТОЖЕ!
-        log.info(">>> ОТПРАВЛЯЕМ PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
+        log.info("Отправляем PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
                 innerRequest.getRequestId(), innerRequest.getUserIdentifier());
 
         SendMessageRequest request = SendMessageRequest.builder()
@@ -246,11 +221,9 @@ public class McoApiClient {
             if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
                 log.info("Получено чеков: {}", response.getReceipts().size());
 
-                response.getReceipts().forEach(receipt -> {
-                    log.info("Чек от: {}, источник: {}",
-                            receipt.getUserIdentifier(),
-                            receipt.getSourceCode());
-                });
+                response.getReceipts().forEach(receipt -> log.info("Чек от: {}, источник: {}",
+                        receipt.getUserIdentifier(),
+                        receipt.getSourceCode()));
             }
 
             marker = response.getNextMarker();
@@ -262,11 +235,9 @@ public class McoApiClient {
     public PostBindPartnerResponse bindUserSync(String phoneNumber, String requestId) {
         log.info("Синхронное подключение пользователя: {}", phoneNumber);
 
-        // ←←← ВОТ СЮДА, ДО ОТПРАВКИ!
-        log.info(">>> Формируем PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
+        log.info("Формируем PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
                 requestId, phoneNumber);
 
-        // Отправляем запрос
         SendMessageResponse messageResponse = bindUser(phoneNumber, requestId);
 
         log.info("Получен MessageId: {}, начинаем опрос результата...", messageResponse.getMessageId());
@@ -289,31 +260,17 @@ public class McoApiClient {
         }
     }
 
-    // ============================================
-// МЕТОДЫ ДЛЯ РАБОТЫ С ЧЕКАМИ
-// ============================================
-
-    /**
-     * СИНХРОННОЕ получение ленты чеков
-     * Отправляет запрос и автоматически опрашивает результат
-     *
-     * @param marker маркер для получения чеков (S_FROM_END, S_FROM_BEGINNING, или NextMarker)
-     * @return ответ с чеками
-     */
     public GetReceiptsTapeResponse getReceiptsSync(String marker) {
-        log.info(">>> Синхронное получение ленты чеков с маркером: {}", marker);
+        log.info("Синхронное получение ленты чеков с маркером: {}", marker);
 
-        // Создаем внутренний запрос
         GetReceiptsTapeRequest innerRequest = GetReceiptsTapeRequest.builder()
                 .marker(marker != null ? marker : "S_FROM_END")
                 .build();
 
-        // Оборачиваем в SendMessageRequest (асинхронный механизм)
         SendMessageRequest request = SendMessageRequest.builder()
                 .message(new SendMessageRequest.MessageWrapper(innerRequest))
                 .build();
 
-        // Отправляем асинхронный запрос
         SendMessageResponse messageResponse = soapClient.sendSoapRequest(
                 request,
                 SendMessageResponse.class,
@@ -324,14 +281,13 @@ public class McoApiClient {
                 messageResponse.getMessageId());
 
         try {
-            // Опрашиваем результат (автоматическое ожидание)
             GetReceiptsTapeResponse response = soapClient.getAsyncResult(
                     messageResponse.getMessageId(),
                     GetReceiptsTapeResponse.class
             );
 
             int receiptsCount = response.getReceipts() != null ? response.getReceipts().size() : 0;
-            log.info("✅ Получено чеков: {}", receiptsCount);
+            log.info("Получено чеков: {}", receiptsCount);
 
             if (response.getNextMarker() != null) {
                 log.debug("NextMarker: {}", response.getNextMarker());
@@ -341,200 +297,74 @@ public class McoApiClient {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("❌ Прервано ожидание результата", e);
+            log.error("Прервано ожидание результата", e);
             throw new RuntimeException("Прервано ожидание результата", e);
         } catch (RuntimeException e) {
-            log.error("❌ Ошибка получения чеков: {}", e.getMessage());
+            log.error("Ошибка получения чеков: {}", e.getMessage());
             throw e;
         }
     }
 
-    /**
-     * Получение ВСЕХ доступных чеков с автоматической пагинацией
-     * Проходит по всем порциям чеков используя NextMarker
-     */
     public void getAllReceiptsSync() {
-        log.info("=== НАЧАЛО ПОЛУЧЕНИЯ ВСЕХ ЧЕКОВ ===");
+        log.info("Начало получения всех чеков");
 
         String marker = "S_FROM_END";
         int totalReceipts = 0;
         int iteration = 0;
         boolean hasMore = true;
-        int maxIterations = 50; // Защита от бесконечного цикла
+        int maxIterations = 50;
 
         while (hasMore && iteration < maxIterations) {
             iteration++;
-            log.info("--- Итерация {} ---", iteration);
+            log.info("Итерация {}", iteration);
 
             try {
                 GetReceiptsTapeResponse response = getReceiptsSync(marker);
 
-                // Обрабатываем полученные чеки
                 if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
                     int batchSize = response.getReceipts().size();
                     totalReceipts += batchSize;
-                    log.info("📦 Получено чеков в этой порции: {}", batchSize);
-
-                    // Выводим информацию о каждом чеке
-                    response.getReceipts().forEach(receipt -> {
-                        log.info("  📄 Чек:");
-                        log.info("     - Пользователь: {}", receipt.getUserIdentifier());
-                        log.info("     - Телефон: {}", receipt.getPhone());
-                        log.info("     - Email: {}", receipt.getEmail());
-                        log.info("     - Дата: {}", receipt.getReceiveDate());
-                        log.info("     - Источник: {}", receipt.getSourceCode());
-
-                        // Если есть JSON чека, можно его декодировать
-                        if (receipt.getJson() != null && receipt.getJson().length > 0) {
-                            try {
-                                String jsonContent = new String(receipt.getJson(), "UTF-8");
-                                log.debug("     - JSON: {}", jsonContent.substring(0, Math.min(100, jsonContent.length())) + "...");
-                            } catch (Exception e) {
-                                log.warn("     - ⚠️ Не удалось декодировать JSON чека", e);
-                            }
-                        }
-                    });
+                    log.info("Получено чеков в этой порции: {}", batchSize);
                 } else {
-                    log.info("📭 Чеков в этой порции нет");
+                    log.info("Чеков в этой порции нет");
                 }
 
-                // Проверяем наличие следующего маркера
                 if (response.getNextMarker() != null && !response.getNextMarker().isEmpty()) {
                     marker = response.getNextMarker();
-                    log.debug("➡️ NextMarker для следующей итерации: {}", marker);
+                    log.debug("NextMarker для следующей итерации: {}", marker);
                 } else {
-                    log.info("⏹️ NextMarker отсутствует - это была последняя порция");
+                    log.info("NextMarker отсутствует - это была последняя порция");
                     hasMore = false;
                 }
 
-                // Проверяем условие продолжения
                 Long remainingPolls = response.getTotalExpectedRemainingPolls();
                 if (remainingPolls != null) {
-                    log.info("📊 Осталось порций для загрузки: {}", remainingPolls);
+                    log.info("Осталось порций для загрузки: {}", remainingPolls);
                     hasMore = hasMore && (remainingPolls > 0);
                 }
 
-                // Небольшая пауза между запросами (для снижения нагрузки)
                 if (hasMore) {
                     Thread.sleep(500);
                 }
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.error("❌ Прервано получение чеков на итерации {}", iteration);
+                log.error("Прервано получение чеков на итерации {}", iteration);
                 break;
             } catch (Exception e) {
-                log.error("❌ Ошибка при получении чеков на итерации {}", iteration, e);
+                log.error("Ошибка при получении чеков на итерации {}", iteration, e);
                 break;
             }
         }
 
         if (iteration >= maxIterations) {
-            log.warn("⚠️ Достигнуто максимальное количество итераций ({}) - остановка", maxIterations);
+            log.warn("Достигнуто максимальное количество итераций ({}) - остановка", maxIterations);
         }
 
-        log.info("=== ЗАВЕРШЕНО: Всего получено {} чеков за {} итераций ===",
+        log.info("Завершено: Всего получено {} чеков за {} итераций",
                 totalReceipts, iteration);
     }
 
-    /**
-     * ТЕСТОВЫЙ метод для демонстрации работы с чеками
-     * Выводит подробную информацию о процессе
-     */
-    public void testReceiptsFlow() {
-        log.info("╔════════════════════════════════════════════════════╗");
-        log.info("║   ТЕСТИРОВАНИЕ ПОЛУЧЕНИЯ ЧЕКОВ                     ║");
-        log.info("╚════════════════════════════════════════════════════╝");
-
-        try {
-            log.info("");
-            log.info("ШАГ 1: Получаем последние чеки (маркер S_FROM_END)");
-            log.info("─────────────────────────────────────────────────────");
-
-            GetReceiptsTapeResponse response = getReceiptsSync("S_FROM_END");
-
-            if (response.getReceipts() == null || response.getReceipts().isEmpty()) {
-                log.warn("");
-                log.warn("╔════════════════════════════════════════════════════╗");
-                log.warn("║   ⚠️ ЧЕКОВ НЕ НАЙДЕНО                              ║");
-                log.warn("╚════════════════════════════════════════════════════╝");
-                log.warn("");
-                log.warn("ВОЗМОЖНЫЕ ПРИЧИНЫ:");
-                log.warn("  1. ❌ У вас нет подключенных пользователей");
-                log.warn("  2. ❌ Подключенные пользователи не сканировали чеки");
-                log.warn("  3. ❌ С момента последнего сканирования прошло > 5 дней");
-                log.warn("");
-                log.warn("ЧТО ДЕЛАТЬ:");
-                log.warn("  1. Подключите тестового пользователя:");
-                log.warn("     POST http://localhost:8085/api/mco/bind-user-test");
-                log.warn("");
-                log.warn("  2. Зайдите в ЛК МЧО и одобрите заявку:");
-                log.warn("     https://dr.stm-labs.ru/partners");
-                log.warn("");
-                log.warn("  3. Отсканируйте чек через мобильное приложение МЧО");
-                log.warn("");
-                log.warn("  4. Подождите 2-3 минуты и повторите запрос");
-                log.warn("");
-
-            } else {
-                log.info("");
-                log.info("╔════════════════════════════════════════════════════╗");
-                log.info("║   ✅ УСПЕХ! ЧЕКИ ПОЛУЧЕНЫ                          ║");
-                log.info("╚════════════════════════════════════════════════════╝");
-                log.info("");
-                log.info("📊 СТАТИСТИКА:");
-                log.info("   • Получено чеков: {}", response.getReceipts().size());
-                log.info("   • Осталось порций: {}", response.getTotalExpectedRemainingPolls());
-                log.info("");
-
-                // Детали первого чека
-                var firstReceipt = response.getReceipts().get(0);
-                log.info("📄 ДЕТАЛИ ПЕРВОГО ЧЕКА:");
-                log.info("   • Пользователь: {}", firstReceipt.getUserIdentifier());
-                log.info("   • Телефон: {}", firstReceipt.getPhone());
-                log.info("   • Email: {}", firstReceipt.getEmail());
-                log.info("   • Дата: {}", firstReceipt.getReceiveDate());
-                log.info("   • Источник: {}", firstReceipt.getSourceCode());
-                log.info("");
-
-                // Информация о JSON
-                if (firstReceipt.getJson() != null && firstReceipt.getJson().length > 0) {
-                    try {
-                        String jsonContent = new String(firstReceipt.getJson(), "UTF-8");
-                        log.info("   • Размер JSON: {} байт", firstReceipt.getJson().length);
-                        log.info("   • Превью JSON: {}...",
-                                jsonContent.substring(0, Math.min(200, jsonContent.length())));
-                    } catch (Exception e) {
-                        log.warn("   • ⚠️ Ошибка декодирования JSON");
-                    }
-                }
-
-                log.info("");
-                log.info("🔗 СЛЕДУЮЩИЙ МАРКЕР:");
-                log.info("   • NextMarker: {}", response.getNextMarker());
-                log.info("");
-                log.info("💡 СОВЕТ: Используйте NextMarker для получения следующей порции:");
-                log.info("   GET /api/mco/receipts?marker={}", response.getNextMarker());
-                log.info("");
-            }
-
-        } catch (Exception e) {
-            log.error("");
-            log.error("╔════════════════════════════════════════════════════╗");
-            log.error("║   ❌ ОШИБКА ПРИ ТЕСТИРОВАНИИ                       ║");
-            log.error("╚════════════════════════════════════════════════════╝");
-            log.error("");
-            log.error("Ошибка: {}", e.getMessage());
-            log.error("");
-            log.error("ПОДРОБНОСТИ:");
-            log.error("", e);
-            log.error("");
-        }
-    }
-
-    /**
-     * Пакетное подключение пользователей к партнеру
-     */
     public PostBindPartnerBatchResponse bindUsersBatch(
             String requestId,
             List<String> phoneNumbers) {
@@ -580,7 +410,7 @@ public class McoApiClient {
             int rejected = response.getRejectedUserIdentifiers() != null ?
                     response.getRejectedUserIdentifiers().size() : 0;
 
-            log.info("✅ Принято: {}, Отклонено: {}", accepted, rejected);
+            log.info("Принято: {}, Отклонено: {}", accepted, rejected);
 
             return response;
 
@@ -590,9 +420,6 @@ public class McoApiClient {
         }
     }
 
-    /**
-     * Получение событий по заявкам на подключение
-     */
     public GetBindPartnerEventResponse getBindPartnerEvents(String marker) {
 
         log.info("Запрос событий с маркером: {}", marker);
@@ -621,7 +448,7 @@ public class McoApiClient {
             );
 
             int eventsCount = response.getEvents() != null ? response.getEvents().size() : 0;
-            log.info("✅ Получено событий: {}, Новый маркер: {}",
+            log.info("Получено событий: {}, Новый маркер: {}",
                     eventsCount, response.getMarker());
 
             return response;
@@ -632,9 +459,6 @@ public class McoApiClient {
         }
     }
 
-    /**
-     * Получение списка отключившихся пользователей
-     */
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
 
         log.info("Запрос отключившихся пользователей с маркером: {}", marker);
@@ -663,12 +487,12 @@ public class McoApiClient {
             );
 
             int unboundsCount = response.getUnbounds() != null ? response.getUnbounds().size() : 0;
-            log.info("✅ Отключившихся: {}, HasMore: {}, NextMarker: {}",
+            log.info("Отключившихся: {}, HasMore: {}, NextMarker: {}",
                     unboundsCount, response.getHasMore(), response.getNextMarker());
 
             if (response.getUnbounds() != null) {
                 response.getUnbounds().forEach(unbound -> {
-                    log.info("  UserIdentifier: {}, RequestId: {}, ResponseTime: {}",
+                    log.info("UserIdentifier: {}, RequestId: {}, ResponseTime: {}",
                             unbound.getUserIdentifier(),
                             unbound.getRequestId(),
                             unbound.getResponseTime());
@@ -682,9 +506,7 @@ public class McoApiClient {
             throw new RuntimeException("Прервано ожидание результата", e);
         }
     }
-    /**
-     * Отправка уведомления пользователю
-     */
+
     public PostNotificationResponse sendNotification(
             String requestId,
             String phoneNumber,
@@ -727,7 +549,7 @@ public class McoApiClient {
                     PostNotificationResponse.class
             );
 
-            log.info("✅ Уведомление отправлено, RequestId: {}, HandledAt: {}",
+            log.info("Уведомление отправлено, RequestId: {}, HandledAt: {}",
                     response.getRequestId(), response.getHandledAt());
 
             return response;

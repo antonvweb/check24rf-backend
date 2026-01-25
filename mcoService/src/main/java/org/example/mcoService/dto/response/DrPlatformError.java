@@ -10,10 +10,10 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class DrPlatformError {
 
-    @XmlElement(name = "Code")  // БЕЗ namespace
+    @XmlElement(name = "Code")
     private String code;
 
-    @XmlElement(name = "Message")  // БЕЗ namespace
+    @XmlElement(name = "Message")
     private String message;
 
     @XmlElementWrapper(name = "Args")

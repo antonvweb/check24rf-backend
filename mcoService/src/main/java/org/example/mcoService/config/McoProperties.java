@@ -14,7 +14,7 @@ public class McoProperties {
     public static class Api {
         private String baseUrl;
         private String token;
-        private String userToken; // Добавлено
+        private String userToken;
         private Integer timeout;
     }
 

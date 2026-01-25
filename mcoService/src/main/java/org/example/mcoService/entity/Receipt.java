@@ -37,7 +37,6 @@ public class Receipt {
     @Column(name = "email")
     private String email;
 
-    // Фискальные данные
     @Column(name = "fiscal_sign", nullable = false)
     private Long fiscalSign;
 
@@ -47,7 +46,6 @@ public class Receipt {
     @Column(name = "fiscal_drive_number", nullable = false, length = 50)
     private String fiscalDriveNumber;
 
-    // Основные данные
     @Column(name = "receipt_date_time", nullable = false)
     private LocalDateTime receiptDateTime;
 
@@ -57,7 +55,6 @@ public class Receipt {
     @Column(name = "total_sum", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalSum;
 
-    // Дополнительная информация
     @Column(name = "source_code", nullable = false, length = 50)
     private String sourceCode;
 
@@ -70,13 +67,11 @@ public class Receipt {
     @Column(name = "retail_place", columnDefinition = "TEXT")
     private String retailPlace;
 
-    // JSONB для хранения полного JSON чека
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_json", nullable = false, columnDefinition = "jsonb")
     @JsonRawValue
     private String rawJson;
 
-    // Служебные поля
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

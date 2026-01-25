@@ -22,7 +22,7 @@ public class ReceiptSyncScheduler {
 
     @Scheduled(fixedDelay = 300_000)
     public void syncReceiptsForAllConnectedUsers() {
-        log.info("=== ЗАПУСК ПЕРИОДИЧЕСКОЙ СИНХРОНИЗАЦИИ ЧЕКОВ ===");
+        log.info("Запуск периодической синхронизации чеков");
 
         List<String> connectedPhones = userRepository.findAllConnectedToPartner().stream()
                 .map(User::getPhoneNumber)
@@ -37,7 +37,7 @@ public class ReceiptSyncScheduler {
                 log.error("Ошибка синхронизации для {}: {}", phone, e.getMessage());
             }
         }
-        log.info("=== СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА ===");
+        log.info("Синхронизация завершена");
     }
 
     private void syncReceiptsForUser(String phone) {

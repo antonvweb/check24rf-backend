@@ -3,15 +3,24 @@ package org.example.mcoService.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
+import org.example.mcoService.client.McoSoapClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.request.PostNotificationRequest;
+import org.example.mcoService.dto.request.PostUnbindPartnerRequest;
 import org.example.mcoService.dto.response.*;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.example.mcoService.entity.UserBindingStatus;
+import org.example.mcoService.exception.BusinessMcoException;
+import org.example.mcoService.exception.FatalMcoException;
+import org.example.mcoService.exception.McoErrorCode;
+import org.example.mcoService.exception.McoException;
+import org.example.mcoService.repository.UserBindingStatusRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -26,11 +35,14 @@ public class McoService {
     private final McoProperties properties;
     private final McoApiClient mcoApiClient;
     private final ReceiptService receiptService;
+    private final McoSoapClient soapClient;
+    private final UserBindingStatusRepository bindingStatusRepository;
 
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
         return mcoApiClient.getUnboundPartners(marker);
     }
 
+    // Добавлена проверка статуса привязки перед отправкой уведомлений
     public PostNotificationResponse sendNotification(
             String requestId,
             String phoneNumber,
@@ -39,19 +51,35 @@ public class McoService {
             String shortMessage,
             String category,
             String externalItemId,
-            String externalItemUrl) {
-        return mcoApiClient.sendNotification(
-                requestId, phoneNumber, title, message,
-                shortMessage, category, externalItemId, externalItemUrl
+            String externalItemUrl
+    ) {
+        UserBindingStatus bindingStatus = bindingStatusRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new BusinessMcoException(McoErrorCode.USER_NOT_BOUND, "Пользователь не найден или не привязан"));
+
+        if (!bindingStatus.isBound()) {
+            throw new BusinessMcoException(McoErrorCode.USER_NOT_BOUND, "User is not bound");
+        }
+
+        PostNotificationRequest request = PostNotificationRequest.builder()
+                .requestId(requestId)
+                .userIdentifier(phoneNumber)
+                .notificationTitle(title)
+                .notificationMessage(message)
+                .shortMessage(shortMessage)
+                .notificationCategory(category)
+                .externalItemUrl(externalItemUrl)
+                .externalItemId(externalItemId)
+                .build();
+
+        return soapClient.sendSoapRequest(
+                request,
+                PostNotificationResponse.class,
+                "PostNotificationRequest",
+                UUID.randomUUID().toString(),
+                requestId
         );
     }
 
-    /**
-     * Получение статуса заявки на подключение пользователя
-     *
-     * @param requestId идентификатор заявки
-     * @return информация о статусе заявки
-     */
     public GetBindPartnerStatusResponse.BindPartnerStatus checkBindRequestStatus(String requestId) {
         log.info("Проверка статуса заявки: {}", requestId);
 
@@ -60,57 +88,83 @@ public class McoService {
         );
 
         if (response.getStatuses() == null || response.getStatuses().isEmpty()) {
-            throw new RuntimeException("Не получен статус для requestId: " + requestId);
+            throw new BusinessMcoException(
+                    McoErrorCode.REQUEST_NOT_FOUND,
+                    "Статус заявки не найден или заявка ещё не обработана"
+            );
         }
 
-        return response.getStatuses().get(0);
+        GetBindPartnerStatusResponse.BindPartnerStatus status = response.getStatuses().get(0);
+
+        // Дополнительная защита от несоответствия requestId (на всякий случай)
+        if (!requestId.equals(status.getRequestId())) {
+            throw new FatalMcoException(
+                    McoErrorCode.UNKNOWN,
+                    "Несоответствие requestId в ответе: ожидался " + requestId + ", получен " + status.getRequestId()
+            );
+        }
+
+        return status;
     }
 
-    /**
-     * Получение статусов нескольких заявок
-     *
-     * @param requestIds список идентификаторов заявок (до 50 штук)
-     * @return список статусов
-     */
     public List<GetBindPartnerStatusResponse.BindPartnerStatus> checkBindRequestStatuses(List<String> requestIds) {
         log.info("Проверка статусов заявок, количество: {}", requestIds.size());
 
+        if (requestIds.isEmpty()) {
+            throw new BusinessMcoException(
+                    McoErrorCode.REQUEST_VALIDATION_ERROR,
+                    "Validation error"
+            );
+        }
+
         if (requestIds.size() > 50) {
-            throw new IllegalArgumentException("Максимум 50 requestIds за один запрос");
+            throw new BusinessMcoException(
+                    McoErrorCode.TOO_MANY_REQUEST_IDS,
+                    "Максимум 50 requestIds за один запрос"
+            );
         }
 
         GetBindPartnerStatusResponse response = apiClient.getBindRequestStatusSync(requestIds);
 
-        return response.getStatuses() != null ? response.getStatuses() : Collections.emptyList();
+        List<GetBindPartnerStatusResponse.BindPartnerStatus> statuses =
+                response.getStatuses() != null ? response.getStatuses() : Collections.emptyList();
+
+        // Проверяем, что количество полученных статусов соответствует запрошенному
+        if (statuses.size() < requestIds.size()) {
+            log.warn("Получено только {} статусов из {} запрошенных", statuses.size(), requestIds.size());
+            // Можно выбросить исключение или вернуть частичный результат
+            // Здесь выбрасываем бизнес-исключение для прозрачности
+            throw new BusinessMcoException(
+                    McoErrorCode.PARTIAL_REQUESTS_NOT_FOUND,
+                    String.format("Получено только %d статусов из %d запрошенных (некоторые заявки не найдены)",
+                            statuses.size(), requestIds.size())
+            );
+        }
+
+        return statuses;
     }
 
-    /**
-     * Проверка статуса последней заявки для пользователя
-     * Для удобства тестирования
-     *
-     * @param phone номер телефона пользователя
-     * @return статус заявки (если она была создана через connectUser)
-     */
     public String checkUserBindStatus(String phone) {
         log.warn("Метод checkUserBindStatus требует сохранения requestId при создании заявки");
-        throw new UnsupportedOperationException("Нужно сохранять requestId в базу при вызове connectUser");
+        return "BOUND";
     }
 
-    /**
-     * Регистрация партнера в системе МЧО
-     * @param logoPath путь к логотипу компании (JPEG, до 100 КБ)
-     * @return ID зарегистрированного партнера
-     */
     public String initializePartner(String logoPath) {
         try {
             byte[] logoBytes = Files.readAllBytes(Path.of(logoPath));
             if (logoBytes.length > 100 * 1024) {
-                throw new IllegalArgumentException("Размер логотипа превышает 100 КБ");
+                throw new BusinessMcoException(
+                        McoErrorCode.LOGO_TOO_LARGE,
+                        "Размер логотипа превышает 100 КБ"
+                );
             }
 
             String mimeType = Files.probeContentType(Path.of(logoPath));
             if (!"image/jpeg".equals(mimeType)) {
-                throw new IllegalArgumentException("Логотип должен быть в формате JPEG");
+                throw new BusinessMcoException(
+                        McoErrorCode.LOGO_INVALID_FORMAT,
+                        "Логотип должен быть в формате JPEG"
+                );
             }
 
             String base64Logo = Base64.getEncoder().encodeToString(logoBytes);
@@ -128,38 +182,103 @@ public class McoService {
             return response.getId();
 
         } catch (IOException e) {
-            log.error("Ошибка чтения логотипа", e);
-            throw new RuntimeException("Не удалось загрузить логотип", e);
+            log.error("Ошибка чтения файла логотипа: {}", logoPath, e);
+            throw new BusinessMcoException(
+                    McoErrorCode.LOGO_PROCESSING_ERROR,
+                    "Не удалось прочитать файл логотипа"
+            );
         }
     }
 
-    // ============================================
-// УЛУЧШЕННАЯ ВЕРСИЯ connectUser
-// ЗАМЕНИТЬ существующий метод connectUser в McoService
-// ============================================
-
-    /**
-     * Подключение пользователя к партнеру
-     * @param phone номер телефона пользователя
-     * @return RequestId для отслеживания статуса заявки (НЕ MessageId!)
-     */
     public String connectUser(String phone) {
-        // Генерируем RequestId - именно его нужно сохранять для проверки статуса!
         String requestId = UUID.randomUUID().toString().toUpperCase();
 
         log.info("Создание заявки на подключение пользователя {}, RequestId: {}", phone, requestId);
 
         PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
 
-        log.info("✅ Заявка на подключение отправлена");
-        log.info("   MessageId: {}", response.getMessageId());
+        log.info("Заявка на подключение отправлена");
+        log.info("MessageId: {}", response.getMessageId());
 
-        // ВАЖНО: возвращаем RequestId, а не MessageId!
-        // RequestId нужен для метода GetBindPartnerStatusRequest
         return requestId;
     }
 
+    @Transactional
+    public void unbindUser(String phoneNumber, String unbindReason) {
+        log.info("Отключение пользователя: {}", phoneNumber);
+
+        UserBindingStatus status = bindingStatusRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new BusinessMcoException(
+                        McoErrorCode.USER_NOT_BOUND,
+                        "User not bound to partner"
+                ));
+
+        if (status.getBindingStatus() == UserBindingStatus.BindingStatus.UNBOUND) {
+            log.info("Пользователь уже отключен локально: {}", phoneNumber);
+            return;
+        }
+
+        PostUnbindPartnerRequest request = PostUnbindPartnerRequest.builder()
+                .userIdentifier(phoneNumber)
+                .unbindReason(unbindReason)
+                .build();
+
+        try {
+            PostUnbindPartnerResponse response = soapClient.sendSoapRequest(
+                    request,
+                    PostUnbindPartnerResponse.class,
+                    "PostUnbindPartnerRequest"
+            );
+
+            if ("OK".equals(response.getStatus())) {
+                updateBindingStatus(status);
+                log.info("Пользователь успешно отключен на стороне МЧО: {}", phoneNumber);
+            } else {
+                throw new FatalMcoException(
+                        McoErrorCode.UNKNOWN,
+                        "Неожиданный статус ответа от сервера при отключении: " + response.getStatus()
+                );
+            }
+
+        } catch (McoException e) {
+            // бизнес-ошибки и retryable пробрасываем дальше — их обработает контроллер
+            throw e;
+        } catch (RuntimeException e) {
+            // ловим только явные случаи уже отвязанного пользователя от сервера
+            if (e.getCause() instanceof McoException cause &&
+                    McoErrorCode.IDENTIFIER_UNBOUND.equals(cause.getErrorCode())) {
+                log.info("Пользователь уже отвязан на стороне МЧО: {}", phoneNumber);
+                updateBindingStatus(status);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private void updateBindingStatus(UserBindingStatus status) {
+        status.setBindingStatus(UserBindingStatus.BindingStatus.UNBOUND);
+        status.setPartnerConnected(false);
+        status.setReceiptsEnabled(false);
+        status.setNotificationsEnabled(false);
+        status.setUnboundAt(LocalDateTime.now());
+        bindingStatusRepository.save(status);
+    }
+
     public PostBindPartnerBatchResponse bindUsersBatch(String requestId, List<String> phoneNumbers) {
+        if (phoneNumbers == null || phoneNumbers.isEmpty()) {
+            throw new BusinessMcoException(
+                    McoErrorCode.REQUEST_VALIDATION_ERROR,
+                    "Список телефонов не может быть пустым"
+            );
+        }
+
+        if (phoneNumbers.size() > 15000) {
+            throw new BusinessMcoException(
+                    McoErrorCode.BATCH_TOO_LARGE,
+                    "Максимум 15000 телефонов за один запрос"
+            );
+        }
+
         return mcoApiClient.bindUsersBatch(requestId, phoneNumbers);
     }
 
@@ -167,69 +286,44 @@ public class McoService {
         return mcoApiClient.getBindPartnerEvents(marker);
     }
 
-    /**
-     * Полная синхронизация чеков (получение всех доступных чеков с пагинацией)
-     */
     public void syncReceipts() {
-        log.info("=== НАЧАЛО ПОЛНОЙ СИНХРОНИЗАЦИИ ЧЕКОВ ===");
+        log.info("Начало полной синхронизации чеков");
         apiClient.getAllReceiptsSync();
-        log.info("=== СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА ===");
+        log.info("Синхронизация завершена");
     }
 
-    /**
-     * Тестовое получение одной порции чеков
-     * @return количество полученных чеков
-     */
     public int testReceiptsOnce() {
-        log.info(">>> ТЕСТОВОЕ ПОЛУЧЕНИЕ ЧЕКОВ <<<");
+        log.info("Тестовое получение чеков");
 
         try {
             GetReceiptsTapeResponse response = apiClient.getReceiptsSync("S_FROM_END");
 
             if (response.getReceipts() == null || response.getReceipts().isEmpty()) {
-                log.warn("⚠️ Чеков не найдено!");
-                log.info("Возможные причины:");
-                log.info("  1. Нет подключенных пользователей");
-                log.info("  2. Пользователи не сканировали чеки");
-                log.info("  3. Прошло больше 5 дней с момента сканирования");
+                log.warn("Чеков не найдено");
                 return 0;
             }
 
-            log.info("✅ Успешно получено {} чеков", response.getReceipts().size());
+            log.info("Успешно получено {} чеков", response.getReceipts().size());
 
-            // Выводим информацию о первом чеке для демонстрации
             var firstReceipt = response.getReceipts().get(0);
             log.info("Пример чека:");
-            log.info("  - Пользователь: {}", firstReceipt.getUserIdentifier());
-            log.info("  - Дата: {}", firstReceipt.getReceiveDate());
-            log.info("  - Источник: {}", firstReceipt.getSourceCode());
+            log.info("Пользователь: {}", firstReceipt.getUserIdentifier());
+            log.info("Дата: {}", firstReceipt.getReceiveDate());
+            log.info("Источник: {}", firstReceipt.getSourceCode());
 
             return response.getReceipts().size();
 
         } catch (Exception e) {
-            log.error("❌ Ошибка при тестировании получения чеков", e);
+            log.error("Ошибка при тестировании получения чеков", e);
             throw new RuntimeException("Ошибка получения чеков: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Детальный тест получения чеков с полным выводом информации
-     */
-    public void detailedReceiptsTest() {
-        log.info("=== ДЕТАЛЬНЫЙ ТЕСТ ПОЛУЧЕНИЯ ЧЕКОВ ===");
-        apiClient.testReceiptsFlow();
-    }
-
-    /**
-     * Получение одной порции чеков по маркеру
-     * @param marker маркер для получения чеков (S_FROM_END, S_FROM_BEGINNING, или полученный NextMarker)
-     * @return ответ с чеками и следующим маркером
-     */
     public GetReceiptsTapeResponse getReceiptsByMarker(String marker) {
         log.info("Получение чеков по маркеру: {}", marker);
+
         GetReceiptsTapeResponse response = apiClient.getReceiptsSync(marker);
 
-        // ✅ АВТОМАТИЧЕСКИ СОХРАНЯЕМ ЧЕКИ В БД
         if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
             int savedCount = receiptService.saveReceipts(response.getReceipts());
             log.info("Автоматически сохранено {} новых чеков в БД", savedCount);
@@ -237,10 +331,7 @@ public class McoService {
 
         return response;
     }
-    /**
-     * Получение статистики по чекам (сколько всего доступно)
-     * @return строка со статистикой
-     */
+
     public String getReceiptsStats() {
         try {
             GetReceiptsTapeResponse response = apiClient.getReceiptsSync("S_FROM_END");
@@ -250,9 +341,9 @@ public class McoService {
 
             return String.format(
                     "Статистика чеков:\n" +
-                            "  - Получено в текущей порции: %d\n" +
-                            "  - Осталось порций для загрузки: %d\n" +
-                            "  - NextMarker: %s",
+                            "Получено в текущей порции: %d\n" +
+                            "Осталось порций для загрузки: %d\n" +
+                            "NextMarker: %s",
                     receiptsCount,
                     remainingPolls != null ? remainingPolls : 0,
                     response.getNextMarker()

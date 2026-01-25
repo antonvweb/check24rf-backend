@@ -3,6 +3,7 @@ package org.example.mcoService.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
+import org.example.mcoService.exception.RetryableMcoException;
 import org.example.common.repository.UserRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -19,13 +20,13 @@ public class BindApprovalPollingService {
     public void startPollingAndUpdateOnApproval(String requestId, String phone) {
         log.info("Запуск фонового опроса статуса заявки {} для пользователя {}", requestId, phone);
 
-        int maxAttempts = 12; // 12 попыток * 30 сек = 6 минут
+        int maxAttempts = 12;
         int attempt = 0;
 
         while (attempt < maxAttempts) {
             try {
                 attempt++;
-                Thread.sleep(30_000); // 30 секунд
+                Thread.sleep(30_000);
 
                 log.debug("Попытка {}/{} проверки статуса заявки {}", attempt, maxAttempts, requestId);
 
@@ -35,7 +36,7 @@ public class BindApprovalPollingService {
                 String result = status != null ? status.getResult() : null;
 
                 if ("REQUEST_APPROVED".equals(result)) {
-                    log.info("✅ Заявка {} одобрена! Обновляем статус пользователя {}", requestId, phone);
+                    log.info("Заявка {} одобрена! Обновляем статус пользователя {}", requestId, phone);
 
                     userRepository.findByPhoneNumber(phone).ifPresent(user -> {
                         user.setPartnerConnected(true);
@@ -43,7 +44,7 @@ public class BindApprovalPollingService {
                         log.info("Статус партнерского подключения обновлен для пользователя {}", phone);
                     });
 
-                    return; // Завершаем опрос
+                    return;
 
                 } else if (isFinalStatus(result)) {
                     log.warn("Заявка {} завершена со статусом: {}", requestId, result);
@@ -54,19 +55,26 @@ public class BindApprovalPollingService {
                 Thread.currentThread().interrupt();
                 log.error("Опрос прерван для заявки {}", requestId);
                 return;
+
+            } catch (RetryableMcoException e) {
+                log.warn("Retryable ошибка при проверке статуса {}: {}. Продолжаем опрос", requestId, e.getMessage());
+
             } catch (Exception e) {
-                log.error("Ошибка при проверке статуса заявки {}: {}", requestId, e.getMessage());
+                log.error("Критическая ошибка при проверке статуса заявки {}: {}", requestId, e.getMessage(), e);
+                return;
             }
         }
 
-        log.warn("⏱️ Таймаут опроса для заявки {} (6 минут истекло)", requestId);
+        log.warn("Таймаут опроса для заявки {} (6 минут истекло)", requestId);
     }
 
     private boolean isFinalStatus(String result) {
         if (result == null) return false;
         return switch (result) {
-            case "REQUEST_APPROVED", "REQUEST_DECLINED",
-                 "REQUEST_CANCELLED_AS_DUPLICATE", "REQUEST_EXPIRED" -> true;
+            case "REQUEST_APPROVED",
+                 "REQUEST_DECLINED",
+                 "REQUEST_CANCELLED_AS_DUPLICATE",
+                 "REQUEST_EXPIRED" -> true;
             default -> false;
         };
     }

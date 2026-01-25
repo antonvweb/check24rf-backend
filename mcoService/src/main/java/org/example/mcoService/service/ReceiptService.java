@@ -33,29 +33,19 @@ public class ReceiptService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Сохранить чеки из MCO API в БД
-     * Автоматически создает пользователей и проверяет дубликаты
-     *
-     * @param receiptsFromMco список чеков от MCO API
-     * @return количество сохраненных новых чеков
-     */
     @Transactional
     public int saveReceipts(List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
         int savedCount = 0;
 
         for (GetReceiptsTapeResponse.Receipt mcoReceipt : receiptsFromMco) {
             try {
-                // Парсим Base64 JSON
                 String jsonString = bytesToString(mcoReceipt.getJson());
                 JsonNode jsonNode = objectMapper.readTree(jsonString);
 
-                // Извлекаем фискальные данные для проверки дубликата
                 Long fiscalSign = jsonNode.get("fiscalSign").asLong();
                 Long fiscalDocumentNumber = jsonNode.get("fiscalDocumentNumber").asLong();
                 String fiscalDriveNumber = jsonNode.get("fiscalDriveNumber").asText();
 
-                // Проверяем, есть ли уже такой чек
                 if (receiptRepository.existsByFiscalSignAndFiscalDocumentNumberAndFiscalDriveNumber(
                         fiscalSign, fiscalDocumentNumber, fiscalDriveNumber)) {
                     log.debug("Чек уже существует: fiscalSign={}, fiscalDocumentNumber={}, fiscalDriveNumber={}",
@@ -63,21 +53,18 @@ public class ReceiptService {
                     continue;
                 }
 
-                // Находим или создаем пользователя
                 User user = findOrCreateUser(mcoReceipt.getUserIdentifier(), mcoReceipt.getEmail());
 
-                // Создаем Receipt entity
                 Receipt receipt = buildReceiptEntity(mcoReceipt, jsonNode, jsonString, user.getId());
 
-                // Сохраняем
                 receiptRepository.save(receipt);
                 savedCount++;
 
-                log.info("✅ Сохранен чек: fiscalSign={}, user={}, sum={}",
+                log.info("Сохранен чек: fiscalSign={}, user={}, sum={}",
                         fiscalSign, user.getPhoneNumber(), receipt.getTotalSum());
 
             } catch (Exception e) {
-                log.error("❌ Ошибка сохранения чека для пользователя {}: {}",
+                log.error("Ошибка сохранения чека для пользователя {}: {}",
                         mcoReceipt.getUserIdentifier(), e.getMessage(), e);
             }
         }
@@ -86,19 +73,10 @@ public class ReceiptService {
         return savedCount;
     }
 
-    /**
-     * Синхронизация чеков конкретного пользователя
-     * Вызывается при заходе пользователя на сайт
-     *
-     * @param phoneNumber номер телефона пользователя
-     * @param receiptsFromMco свежие чеки от MCO API
-     * @return количество добавленных новых чеков
-     */
     @Transactional
     public int syncUserReceipts(String phoneNumber, List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
         log.info("Синхронизация чеков для пользователя: {}", phoneNumber);
 
-        // Фильтруем только чеки этого пользователя
         List<GetReceiptsTapeResponse.Receipt> userReceipts = receiptsFromMco.stream()
                 .filter(r -> phoneNumber.equals(r.getUserIdentifier()) || phoneNumber.equals(r.getPhone()))
                 .toList();
@@ -111,9 +89,6 @@ public class ReceiptService {
         return saveReceipts(userReceipts);
     }
 
-    /**
-     * Найти или создать пользователя
-     */
     private User findOrCreateUser(String phoneNumber, String email) {
         return userRepository.findByPhoneNumber(phoneNumber)
                 .orElseGet(() -> {
@@ -127,26 +102,20 @@ public class ReceiptService {
                 });
     }
 
-    /**
-     * Построить Receipt entity из данных MCO и распарсенного JSON
-     */
     private Receipt buildReceiptEntity(GetReceiptsTapeResponse.Receipt mcoReceipt,
                                        JsonNode jsonNode,
                                        String jsonString,
                                        UUID userId) {
-        // Парсим дату чека (Unix timestamp в секундах)
         long dateTimestamp = jsonNode.get("dateTime").asLong();
         LocalDateTime receiptDateTime = LocalDateTime.ofInstant(
                 Instant.ofEpochSecond(dateTimestamp),
                 ZoneId.systemDefault()
         );
 
-        // Парсим receiveDate из строки ISO 8601
         LocalDateTime receiveDate = LocalDateTime.parse(
                 mcoReceipt.getReceiveDate().replace("Z", "")
         );
 
-        // Сумма в копейках -> рубли
         BigDecimal totalSum = BigDecimal.valueOf(jsonNode.get("totalSum").asLong())
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
@@ -169,23 +138,17 @@ public class ReceiptService {
                 .build();
     }
 
-    /**
-     * Декодировать Base64 JSON из чека
-     */
     private String bytesToString(byte[] jsonBytes) {
         return new String(jsonBytes, StandardCharsets.UTF_8);
     }
 
-    /**
-     * Получить чеки пользователя по номеру телефона
-     */
     public Page<ReceiptDto> getUserReceiptsByPhone(String phoneNumber, Pageable pageable) {
         User user = userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден: " + phoneNumber));
 
         Page<Receipt> page = receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(user.getId(), pageable);
 
-        return page.map(this::toDto);  // ← конвертация
+        return page.map(this::toDto);
     }
 
     private ReceiptDto toDto(Receipt receipt) {

@@ -103,9 +103,13 @@ public class UnboundUsersSyncScheduler {
                     userRepository.findByPhoneNumber(phone).ifPresent(user -> {
                         UUID userId = user.getId();
 
-                        // 1. Удаляем все чеки пользователя пакетами
+                        // Удаляем чеки пакетами
                         long deletedReceipts = deleteUserReceiptsInBatches(userId, phone);
                         log.info("Удалено {} чеков пользователя {}", deletedReceipts, phone);
+
+                        // Снимаем привязку партнёра
+                        user.setPartnerConnected(false);
+                        // save не обязателен, если user - managed entity
                     });
 
                     // 3. Удаляем запись из user_binding_status

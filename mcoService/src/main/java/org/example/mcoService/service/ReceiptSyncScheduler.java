@@ -3,6 +3,8 @@ package org.example.mcoService.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.common.entity.User;
+import org.example.common.entity.UserBindingStatus;
+import org.example.common.repository.UserBindingStatusRepository;
 import org.example.common.repository.UserRepository;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,13 +21,14 @@ public class ReceiptSyncScheduler {
     private final McoService mcoService;
     private final ReceiptService receiptService;
     private final ReceiptMarkerService markerService;
+    private final UserBindingStatusRepository bindingStatusRepository;
 
     @Scheduled(fixedDelay = 300_000)
     public void syncReceiptsForAllConnectedUsers() {
         log.info("Запуск периодической синхронизации чеков");
 
-        List<String> connectedPhones = userRepository.findAllConnectedToPartner().stream()
-                .map(User::getPhoneNumber)
+        List<String> connectedPhones = bindingStatusRepository.findAll().stream()
+                .map(UserBindingStatus::getPhoneNumber)
                 .toList();
 
         log.info("Найдено {} подключенных пользователей", connectedPhones.size());

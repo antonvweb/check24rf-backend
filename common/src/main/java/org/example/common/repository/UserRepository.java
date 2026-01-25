@@ -13,9 +13,6 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByPhoneNumber(String phoneNumber);
     Optional<User> findByEmail(String email);
-
-    @Query("SELECT u FROM User u WHERE u.isPartnerConnected = true")
-    List<User> findAllConnectedToPartner();
 }
 
 

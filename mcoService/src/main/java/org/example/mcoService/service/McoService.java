@@ -190,10 +190,27 @@ public class McoService {
         }
     }
 
+    @Transactional
     public String connectUser(String phone) {
         String requestId = UUID.randomUUID().toString().toUpperCase();
 
         log.info("Создание заявки на подключение пользователя {}, RequestId: {}", phone, requestId);
+
+        // Сначала создаем запись в UserBindingStatus со статусом PENDING
+        UserBindingStatus initialStatus = UserBindingStatus.builder()
+                .phoneNumber(phone)
+                .requestId(requestId)
+                .bindingStatus(UserBindingStatus.BindingStatus.PENDING)
+                .partnerConnected(false)
+                .receiptsEnabled(false)
+                .notificationsEnabled(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .bound(false)
+                .build();
+
+        bindingStatusRepository.save(initialStatus);
+        log.info("Создана начальная запись в user_binding_status для запроса {}", requestId);
 
         PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
 

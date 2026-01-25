@@ -92,7 +92,6 @@ public class BindApprovalPollingService {
 
         log.warn("Таймаут опроса для заявки {} (6 минут истекло)", requestId);
 
-        // При таймауте тоже сохраняем статус
         bindingStatusRepository.createOrUpdateBindingStatus(
                 phone,
                 requestId,

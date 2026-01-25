@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.common.repository.UserRepository;
 import org.example.mcoService.dto.response.GetUnboundPartnerResponse;
+import org.example.mcoService.repository.ReceiptRepository;
+import org.example.mcoService.repository.UserBindingStatusRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -16,8 +19,13 @@ import java.util.List;
 public class UnboundUsersSyncScheduler {
 
     private final UserRepository userRepository;
+    private final UserBindingStatusRepository bindingStatusRepository;
+    private final ReceiptRepository receiptRepository;
     private final McoService mcoService;
     private final UnboundMarkerService unboundMarkerService;
+
+    private static final int BATCH_SIZE = 1000; // Размер пакета для удаления чеков
+    private static final int BATCH_PAUSE_MS = 100; // Пауза между пакетами в миллисекундах
 
     @Scheduled(fixedDelay = 300_000) // 5 минут, как и для чеков
     public void syncUnboundUsers() {
@@ -39,8 +47,8 @@ public class UnboundUsersSyncScheduler {
         GetUnboundPartnerResponse response = mcoService.getUnboundPartners(marker);
 
         if (response.getUnbounds() != null && !response.getUnbounds().isEmpty()) {
-            int updatedCount = updateUnboundUsers(response.getUnbounds());
-            log.info("Обновлено {} пользователей, отключившихся от партнера", updatedCount);
+            int deletedCount = deleteUnboundUsers(response.getUnbounds());
+            log.info("Обработано {} пользователей, отключившихся от партнера", deletedCount);
         } else {
             log.debug("Нет новых отключившихся пользователей");
         }
@@ -53,7 +61,6 @@ public class UnboundUsersSyncScheduler {
         // Если есть еще данные (hasMore = true), обрабатываем следующую порцию рекурсивно
         if (Boolean.TRUE.equals(response.getHasMore()) && response.getNextMarker() != null) {
             log.debug("Есть еще данные, обрабатываем следующую порцию");
-            // Используем рекурсивный вызов для обработки всех порций
             processNextUnboundBatch(response.getNextMarker());
         }
     }
@@ -65,8 +72,8 @@ public class UnboundUsersSyncScheduler {
             GetUnboundPartnerResponse response = mcoService.getUnboundPartners(marker);
 
             if (response.getUnbounds() != null && !response.getUnbounds().isEmpty()) {
-                int updatedCount = updateUnboundUsers(response.getUnbounds());
-                log.debug("Обновлено еще {} отключившихся пользователей", updatedCount);
+                int deletedCount = deleteUnboundUsers(response.getUnbounds());
+                log.debug("Обработано еще {} отключившихся пользователей", deletedCount);
             }
 
             // Сохраняем новый маркер
@@ -85,29 +92,133 @@ public class UnboundUsersSyncScheduler {
     }
 
     @Transactional
-    protected int updateUnboundUsers(List<GetUnboundPartnerResponse.UnboundUser> unboundUsers) {
-        int updatedCount = 0;
+    protected int deleteUnboundUsers(List<GetUnboundPartnerResponse.UnboundUser> unboundUsers) {
+        int processedCount = 0;
 
         for (GetUnboundPartnerResponse.UnboundUser unboundUser : unboundUsers) {
             String phone = unboundUser.getUserIdentifier();
-            System.out.println(phone);
 
             if (phone != null && !phone.isEmpty()) {
                 try {
                     userRepository.findByPhoneNumber(phone).ifPresent(user -> {
-                        if (user.isPartnerConnected()) {
-                            user.setPartnerConnected(false);
-                            userRepository.save(user);
-                            log.debug("Пользователь {} отмечен как отключенный от партнера", phone);
-                        }
+                        UUID userId = user.getId();
+
+                        // 1. Удаляем все чеки пользователя пакетами
+                        long deletedReceipts = deleteUserReceiptsInBatches(userId, phone);
+                        log.info("Удалено {} чеков пользователя {}", deletedReceipts, phone);
                     });
-                    updatedCount++;
+
+                    // 3. Удаляем запись из user_binding_status
+                    bindingStatusRepository.findByPhoneNumber(phone).ifPresent(bindingStatus -> {
+                        bindingStatusRepository.delete(bindingStatus);
+                        log.info("Статус подключения удален для пользователя {}", phone);
+                    });
+
+                    processedCount++;
+
                 } catch (Exception e) {
-                    log.error("Ошибка при обновлении статуса пользователя {}: {}", phone, e.getMessage());
+                    log.error("Ошибка при удалении пользователя {}: {}", phone, e.getMessage(), e);
                 }
             }
         }
 
-        return updatedCount;
+        return processedCount;
+    }
+
+    @Transactional
+    protected long deleteUserReceiptsInBatches(UUID userId, String phone) {
+        try {
+            // Сначала получаем общее количество чеков
+            long totalReceipts = receiptRepository.countByUserId(userId);
+            if (totalReceipts == 0) {
+                log.debug("У пользователя {} нет чеков для удаления", phone);
+                return 0;
+            }
+
+            log.info("Начинаем пакетное удаление {} чеков пользователя {}", totalReceipts, phone);
+
+            long totalDeleted = 0;
+            int batchDeleted;
+            int batchNumber = 0;
+
+            do {
+                batchNumber++;
+
+                // Удаляем пакет чеков
+                batchDeleted = receiptRepository.deleteBatchByUserId(userId, BATCH_SIZE);
+                totalDeleted += batchDeleted;
+
+                log.debug("Пакет {}: удалено {} чеков, всего удалено: {}/{}",
+                        batchNumber, batchDeleted, totalDeleted, totalReceipts);
+
+                // Делаем паузу между пакетами, если удалили полный пакет
+                if (batchDeleted == BATCH_SIZE) {
+                    try {
+                        Thread.sleep(BATCH_PAUSE_MS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Пакетное удаление прервано для пользователя {}", phone);
+                        break;
+                    }
+                }
+
+            } while (batchDeleted == BATCH_SIZE);
+
+            log.info("Завершено пакетное удаление: всего удалено {} чеков пользователя {}", totalDeleted, phone);
+            return totalDeleted;
+
+        } catch (Exception e) {
+            log.error("Ошибка при пакетном удалении чеков для пользователя {}: {}", phone, e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    // Альтернативный метод: удаление по userIdentifier (если userId не сохраняется в чеках)
+    @Transactional
+    protected long deleteUserReceiptsByIdentifierInBatches(String userIdentifier) {
+        try {
+            // Сначала получаем общее количество чеков
+            long totalReceipts = receiptRepository.countByUserIdentifier(userIdentifier);
+            if (totalReceipts == 0) {
+                log.debug("У пользователя {} нет чеков для удаления", userIdentifier);
+                return 0;
+            }
+
+            log.info("Начинаем пакетное удаление {} чеков пользователя {}", totalReceipts, userIdentifier);
+
+            long totalDeleted = 0;
+            int batchDeleted;
+            int batchNumber = 0;
+
+            do {
+                batchNumber++;
+
+                // Удаляем пакет чеков
+                batchDeleted = receiptRepository.deleteBatchByUserIdentifier(userIdentifier, BATCH_SIZE);
+                totalDeleted += batchDeleted;
+
+                log.debug("Пакет {}: удалено {} чеков, всего удалено: {}/{}",
+                        batchNumber, batchDeleted, totalDeleted, totalReceipts);
+
+                // Делаем паузу между пакетами
+                if (batchDeleted == BATCH_SIZE) {
+                    try {
+                        Thread.sleep(BATCH_PAUSE_MS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Пакетное удаление прервано для пользователя {}", userIdentifier);
+                        break;
+                    }
+                }
+
+            } while (batchDeleted == BATCH_SIZE);
+
+            log.info("Завершено пакетное удаление: всего удалено {} чеков пользователя {}", totalDeleted, userIdentifier);
+            return totalDeleted;
+
+        } catch (Exception e) {
+            log.error("Ошибка при пакетном удалении чеков для пользователя {}: {}", userIdentifier, e.getMessage(), e);
+            return 0;
+        }
     }
 }

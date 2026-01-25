@@ -1,4 +1,4 @@
-package org.example.mcoService.entity;
+package org.example.common.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

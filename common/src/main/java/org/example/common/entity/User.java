@@ -39,10 +39,7 @@ public class User {
     private LocalDateTime createdAt;
 
     @Column(name = "is_active")
-    private boolean isActive = true; // ← добавьте значение по умолчанию
-
-    @Column(name = "is_partner_connected")
-    private boolean isPartnerConnected = false; // ← добавьте значение по умолчанию
+    private boolean isActive = true;
 
     @PrePersist
     protected void onCreate() {

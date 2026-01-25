@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.common.repository.UserRepository;
 import org.example.mcoService.dto.response.GetUnboundPartnerResponse;
 import org.example.mcoService.repository.ReceiptRepository;
-import org.example.mcoService.repository.UserBindingStatusRepository;
+import org.example.common.repository.UserBindingStatusRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,10 +106,6 @@ public class UnboundUsersSyncScheduler {
                         // Удаляем чеки пакетами
                         long deletedReceipts = deleteUserReceiptsInBatches(userId, phone);
                         log.info("Удалено {} чеков пользователя {}", deletedReceipts, phone);
-
-                        // Снимаем привязку партнёра
-                        user.setPartnerConnected(false);
-                        // save не обязателен, если user - managed entity
                     });
 
                     // 3. Удаляем запись из user_binding_status

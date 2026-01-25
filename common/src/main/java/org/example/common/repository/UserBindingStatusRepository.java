@@ -1,6 +1,6 @@
-package org.example.mcoService.repository;
+package org.example.common.repository;
 
-import org.example.mcoService.entity.UserBindingStatus;
+import org.example.common.entity.UserBindingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

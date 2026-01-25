@@ -3,9 +3,9 @@ package org.example.mcoService.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.response.GetBindPartnerStatusResponse;
-import org.example.mcoService.entity.UserBindingStatus;
+import org.example.common.entity.UserBindingStatus;
 import org.example.mcoService.exception.RetryableMcoException;
-import org.example.mcoService.repository.UserBindingStatusRepository;
+import org.example.common.repository.UserBindingStatusRepository;
 import org.example.common.repository.UserRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -45,7 +45,6 @@ public class BindApprovalPollingService {
 
                     // 1. Обновляем статус в таблице User
                     userRepository.findByPhoneNumber(phone).ifPresent(user -> {
-                        user.setPartnerConnected(true);
                         userRepository.save(user);
                         log.info("Статус партнерского подключения обновлен для пользователя {}", phone);
                     });

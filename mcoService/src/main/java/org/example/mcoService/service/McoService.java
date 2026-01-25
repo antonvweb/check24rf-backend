@@ -8,12 +8,12 @@ import org.example.mcoService.config.McoProperties;
 import org.example.mcoService.dto.request.PostNotificationRequest;
 import org.example.mcoService.dto.request.PostUnbindPartnerRequest;
 import org.example.mcoService.dto.response.*;
-import org.example.mcoService.entity.UserBindingStatus;
+import org.example.common.entity.UserBindingStatus;
 import org.example.mcoService.exception.BusinessMcoException;
 import org.example.mcoService.exception.FatalMcoException;
 import org.example.mcoService.exception.McoErrorCode;
 import org.example.mcoService.exception.McoException;
-import org.example.mcoService.repository.UserBindingStatusRepository;
+import org.example.common.repository.UserBindingStatusRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -357,10 +357,11 @@ public class McoService {
             Long remainingPolls = response.getTotalExpectedRemainingPolls();
 
             return String.format(
-                    "Статистика чеков:\n" +
-                            "Получено в текущей порции: %d\n" +
-                            "Осталось порций для загрузки: %d\n" +
-                            "NextMarker: %s",
+                    """
+                            Статистика чеков:
+                            Получено в текущей порции: %d
+                            Осталось порций для загрузки: %d
+                            NextMarker: %s""",
                     receiptsCount,
                     remainingPolls != null ? remainingPolls : 0,
                     response.getNextMarker()

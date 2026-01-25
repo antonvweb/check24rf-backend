@@ -4,6 +4,8 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.common.entity.User;
+import org.example.common.entity.UserBindingStatus;
+import org.example.common.repository.UserBindingStatusRepository;
 import org.example.common.repository.UserRepository;
 import org.example.common.security.JwtUtil;
 import org.example.userService.dto.*;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 public class UserService {
     
     private final UserRepository userRepository;
+    private final UserBindingStatusRepository bindingStatusRepository;
     private final JwtUtil jwtUtil;
     private final RestTemplate restTemplate;
     
@@ -50,7 +53,23 @@ public class UserService {
     public UserDetailResponse getUserDetail(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден: " + userId));
-        
+
+        boolean isPartnerConnected = false;
+
+        // Проверяем наличие записи в binding_status
+        Optional<UserBindingStatus> userBindingStatus = bindingStatusRepository.findByPhoneNumber(user.getPhoneNumber());
+
+        if (userBindingStatus.isPresent()) {
+            // Если запись существует, проверяем её статус
+            UserBindingStatus status = userBindingStatus.get();
+
+            // Проверяем несколько условий для определения подключения
+            if (status.getBindingStatus() == UserBindingStatus.BindingStatus.APPROVED &&
+                    Boolean.TRUE.equals(status.getPartnerConnected())) {
+                isPartnerConnected = true;
+            }
+        }
+
         return UserDetailResponse.builder()
                 .phoneNumber(user.getPhoneNumber())
                 .phoneNumberAlt(user.getPhoneNumberAlt())
@@ -59,7 +78,7 @@ public class UserService {
                 .telegramChatId(user.getTelegramChatId())
                 .createdAt(user.getCreatedAt())
                 .isActive(user.isActive())
-                .isPartnerConnected(user.isPartnerConnected())
+                .isPartnerConnected(isPartnerConnected)
                 .build();
     }
 

@@ -57,7 +57,9 @@ public class AuthService {
             throw new IllegalArgumentException("Идентификатор не может быть пустым");
         }
 
-        String code = String.format("%06d", new Random().nextInt(1_000_000));
+        // TODO: Вернуть случайную генерацию после демонстрации МЧО
+        // String code = String.format("%06d", new Random().nextInt(1_000_000));
+        String code = "123456";
 
         // Определяем тип: телефон или email
         boolean isEmail = identifier.contains("@");

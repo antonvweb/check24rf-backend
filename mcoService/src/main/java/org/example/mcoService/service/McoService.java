@@ -382,8 +382,9 @@ public class McoService {
         GetReceiptsTapeResponse response = apiClient.getReceiptsSync(marker);
 
         if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
-            int savedCount = receiptService.saveReceipts(response.getReceipts());
-            log.info("Автоматически сохранено {} новых чеков в БД", savedCount);
+            var result = receiptService.saveReceipts(response.getReceipts());
+            log.info("Автоматически сохранено {} новых чеков в БД на сумму {}",
+                    result.count(), result.getTotalSumFormatted());
         }
 
         return response;

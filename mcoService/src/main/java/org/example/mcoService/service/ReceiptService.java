@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.dto.api.ReceiptDto;
+import org.example.mcoService.dto.api.SaveReceiptsResult;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
 import org.example.mcoService.entity.Receipt;
 import org.example.common.entity.User;
@@ -34,8 +35,9 @@ public class ReceiptService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public int saveReceipts(List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
+    public SaveReceiptsResult saveReceipts(List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
         int savedCount = 0;
+        BigDecimal totalSum = BigDecimal.ZERO;
 
         for (GetReceiptsTapeResponse.Receipt mcoReceipt : receiptsFromMco) {
             try {
@@ -59,6 +61,7 @@ public class ReceiptService {
 
                 receiptRepository.save(receipt);
                 savedCount++;
+                totalSum = totalSum.add(receipt.getTotalSum());
 
                 log.info("Сохранен чек: fiscalSign={}, user={}, sum={}",
                         fiscalSign, user.getPhoneNumber(), receipt.getTotalSum());
@@ -69,12 +72,12 @@ public class ReceiptService {
             }
         }
 
-        log.info("Сохранено {} новых чеков из {}", savedCount, receiptsFromMco.size());
-        return savedCount;
+        log.info("Сохранено {} новых чеков из {} на сумму {}", savedCount, receiptsFromMco.size(), totalSum);
+        return new SaveReceiptsResult(savedCount, totalSum);
     }
 
     @Transactional
-    public int syncUserReceipts(String phoneNumber, List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
+    public SaveReceiptsResult syncUserReceipts(String phoneNumber, List<GetReceiptsTapeResponse.Receipt> receiptsFromMco) {
         log.info("Синхронизация чеков для пользователя: {}", phoneNumber);
 
         List<GetReceiptsTapeResponse.Receipt> userReceipts = receiptsFromMco.stream()
@@ -83,7 +86,7 @@ public class ReceiptService {
 
         if (userReceipts.isEmpty()) {
             log.info("Нет новых чеков для пользователя {}", phoneNumber);
-            return 0;
+            return SaveReceiptsResult.empty();
         }
 
         return saveReceipts(userReceipts);

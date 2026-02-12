@@ -19,6 +19,7 @@ public class BindApprovalPollingService {
     private final McoService mcoService;
     private final UserRepository userRepository;
     private final UserBindingStatusRepository bindingStatusRepository;
+    private final AutoNotificationService autoNotificationService;
 
     @Async
     @Transactional
@@ -58,6 +59,9 @@ public class BindApprovalPollingService {
 
                     log.info("Создана/обновлена запись в user_binding_status для пользователя {}, ID: {}",
                             phone, bindingStatus.getId());
+
+                    // 3. Отправляем уведомление о завершении подключения
+                    autoNotificationService.sendBindingCompletedNotification(phone);
 
                     return;
 

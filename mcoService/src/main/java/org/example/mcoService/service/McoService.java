@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.mcoService.client.McoApiClient;
 import org.example.mcoService.client.McoSoapClient;
 import org.example.mcoService.config.McoProperties;
+import org.example.mcoService.dto.notification.NotificationParams;
 import org.example.mcoService.dto.request.PostNotificationRequest;
 import org.example.mcoService.dto.request.PostUnbindPartnerRequest;
 import org.example.mcoService.dto.response.*;
+import org.example.mcoService.enums.NotificationType;
 import org.example.common.entity.UserBindingStatus;
 import org.example.mcoService.exception.BusinessMcoException;
 import org.example.mcoService.exception.FatalMcoException;
@@ -37,6 +39,7 @@ public class McoService {
     private final ReceiptService receiptService;
     private final McoSoapClient soapClient;
     private final UserBindingStatusRepository bindingStatusRepository;
+    private final NotificationTemplateService templateService;
 
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
         return mcoApiClient.getUnboundPartners(marker);
@@ -77,6 +80,45 @@ public class McoService {
                 "PostNotificationRequest",
                 UUID.randomUUID().toString(),
                 requestId
+        );
+    }
+
+    /**
+     * Отправка типизированного уведомления с использованием шаблонов.
+     * Упрощает отправку уведомлений, автоматически заполняя шаблоны из NotificationType.
+     *
+     * @param phoneNumber номер телефона пользователя
+     * @param type        тип уведомления из enum NotificationType
+     * @param params      параметры уведомления (переменные для шаблона, externalItemId/Url)
+     * @return ответ от МЧО
+     */
+    public PostNotificationResponse sendTypedNotification(
+            String phoneNumber,
+            NotificationType type,
+            NotificationParams params
+    ) {
+        log.info("Отправка типизированного уведомления {} пользователю {}", type.name(), phoneNumber);
+
+        // Заполняем шаблоны из enum значениями из params
+        String title = templateService.getTitle(type, params.getTemplateVariables());
+        String message = templateService.getMessage(type, params.getTemplateVariables());
+        String shortMessage = templateService.getShortMessage(type, params.getTemplateVariables());
+        String category = type.getCategory(); // Всегда GENERAL
+
+        String requestId = UUID.randomUUID().toString();
+
+        log.debug("Уведомление {}: title='{}', message='{}', shortMessage='{}'",
+                type.name(), title, message, shortMessage);
+
+        return sendNotification(
+                requestId,
+                phoneNumber,
+                title,
+                message,
+                shortMessage,
+                category,
+                params.getExternalItemId(),
+                params.getExternalItemUrl()
         );
     }
 

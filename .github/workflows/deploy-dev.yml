@@ -15,13 +15,57 @@ jobs:
       - name: 🔐 Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
           
-          # Проверяем формат ключа
-          echo "🔍 Checking key format..."
+          # ДИАГНОСТИКА: Проверяем что приходит в секрете
+          echo "🔍 Checking secret variable..."
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ ERROR: SSH_PRIVATE_KEY secret is empty!"
+            exit 1
+          fi
+          
+          # Сохраняем ключ с правильными переносами строк
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          
+          # ФИКС 1: Удаляем возможные кавычки и лишние пробелы
+          sed -i 's/^"//; s/"$//' ~/.ssh/deploy_key 2>/dev/null || true
+          
+          # ФИКС 2: Добавляем перенос строки в конце если его нет
+          echo "" >> ~/.ssh/deploy_key
+          
+          chmod 600 ~/.ssh/deploy_key
+          
+          # ДИАГНОСТИКА: Проверяем формат ключа
+          echo "🔍 Key first line:"
           head -1 ~/.ssh/deploy_key
+          
+          echo "🔍 Key length:"
+          wc -l ~/.ssh/deploy_key
+          
+          # Проверяем что ключ начинается с правильного заголовка
+          if ! head -1 ~/.ssh/deploy_key | grep -q "BEGIN OPENSSH PRIVATE KEY\|BEGIN RSA PRIVATE KEY"; then
+            echo "❌ ERROR: SSH key has wrong format!"
+            echo "Key should start with '-----BEGIN OPENSSH PRIVATE KEY-----' or '-----BEGIN RSA PRIVATE KEY-----'"
+            exit 1
+          fi
+          
+          # Добавляем хост в known_hosts
+          ssh-keyscan -H -p ${{ secrets.SSH_PORT || '2222' }} ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null
+          
+          echo "✅ SSH key setup complete"
+
+      - name: 🔑 Debug SSH Key (безопасная проверка)
+        run: |
+          echo "🔍 SSH Key fingerprint:"
+          ssh-keygen -lf ~/.ssh/deploy_key || echo "❌ Not a valid key format"
+          
+          echo "🔍 Testing SSH connection (verbose)..."
+          ssh -v -i ~/.ssh/deploy_key \
+              -o IdentitiesOnly=yes \
+              -o PreferredAuthentications=publickey \
+              -o PubkeyAuthentication=yes \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || '2222' }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected" 2>&1 || true
 
       - name: ✅ SSH Connection Test
         env:
@@ -31,15 +75,17 @@ jobs:
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
               -o PubkeyAuthentication=yes \
-              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || '2222' }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected successfully"
 
       - name: 📤 Sync root files
         env:
           SSH_AUTH_SOCK: ""
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || '2222' }}" \
             ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || '2222' }}" \
             ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
 
       - name: 📤 Sync all modules
@@ -51,7 +97,7 @@ jobs:
           for module in $MODULES; do
             echo "📦 Syncing $module..."
             rsync -avz --delete \
-              -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+              -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || '2222' }}" \
               --exclude .git \
               --exclude .idea \
               --exclude target \
@@ -67,6 +113,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || '2222' }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}
@@ -75,7 +123,7 @@ jobs:
             mvn clean -f pom.xml
 
             echo "📦 Building entire project once (parent + all modules)..."
-            mvn clean install -U -DskipTests -T 1C  # -T 1C = многопоточно, ускоряет на 30–60%
+            mvn clean install -U -DskipTests -T 1C
 
             echo "All modules built successfully in one pass!"
           EOF
@@ -87,6 +135,8 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || '2222' }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_DEV_PATH }}

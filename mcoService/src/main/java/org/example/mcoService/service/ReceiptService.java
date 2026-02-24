@@ -93,7 +93,7 @@ public class ReceiptService {
     }
 
     private User findOrCreateUser(String phoneNumber, String email) {
-        return userRepository.findByPhoneNumber(phoneNumber)
+        return userRepository.findByPhoneNumberNormalized(phoneNumber)
                 .orElseGet(() -> {
                     log.info("Создаем нового пользователя: {}", phoneNumber);
                     User newUser = User.builder()
@@ -146,7 +146,7 @@ public class ReceiptService {
     }
 
     public Page<ReceiptDto> getUserReceiptsByPhone(String phoneNumber, Pageable pageable) {
-        User user = userRepository.findByPhoneNumber(phoneNumber)
+        User user = userRepository.findByPhoneNumberNormalized(phoneNumber)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден: " + phoneNumber));
 
         Page<Receipt> page = receiptRepository.findByUserIdOrderByReceiptDateTimeDesc(user.getId(), pageable);

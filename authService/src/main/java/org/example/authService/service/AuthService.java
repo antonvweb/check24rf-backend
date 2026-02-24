@@ -136,7 +136,7 @@ public class AuthService {
             user = userRepository.findByEmail(cleanIdentifier)
                     .orElseGet(() -> createUser(null, cleanIdentifier));
         } else {
-            user = userRepository.findByPhoneNumber(cleanIdentifier)
+            user = userRepository.findByPhoneNumberNormalized(cleanIdentifier)
                     .orElseGet(() -> createUser(cleanIdentifier, null));
         }
 

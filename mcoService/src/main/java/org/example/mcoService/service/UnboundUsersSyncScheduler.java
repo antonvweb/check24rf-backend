@@ -100,7 +100,7 @@ public class UnboundUsersSyncScheduler {
 
             if (phone != null && !phone.isEmpty()) {
                 try {
-                    userRepository.findByPhoneNumber(phone).ifPresent(user -> {
+                    userRepository.findByPhoneNumberNormalized(phone).ifPresent(user -> {
                         UUID userId = user.getId();
 
                         // Удаляем чеки пакетами
@@ -109,7 +109,7 @@ public class UnboundUsersSyncScheduler {
                     });
 
                     // 3. Удаляем запись из user_binding_status
-                    bindingStatusRepository.findByPhoneNumber(phone).ifPresent(bindingStatus -> {
+                    bindingStatusRepository.findByPhoneNumberNormalized(phone).ifPresent(bindingStatus -> {
                         bindingStatusRepository.delete(bindingStatus);
                         log.info("Статус подключения удален для пользователя {}", phone);
                     });

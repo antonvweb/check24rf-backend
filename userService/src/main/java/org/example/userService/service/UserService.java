@@ -153,7 +153,7 @@ public class UserService {
     @Transactional
     public UserDetailResponse createUser(CreateUserRequest request) {
         // Проверяем, существует ли пользователь с таким номером
-        if (userRepository.findByPhoneNumber(request.getPhoneNumber()).isPresent()) {
+        if (userRepository.findByPhoneNumberNormalized(request.getPhoneNumber()).isPresent()) {
             throw new IllegalArgumentException("Пользователь с номером " + request.getPhoneNumber() + " уже существует");
         }
         

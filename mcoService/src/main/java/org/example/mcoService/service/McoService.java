@@ -56,7 +56,7 @@ public class McoService {
             String externalItemId,
             String externalItemUrl
     ) {
-        UserBindingStatus bindingStatus = bindingStatusRepository.findByPhoneNumber(phoneNumber)
+        UserBindingStatus bindingStatus = bindingStatusRepository.findByPhoneNumberNormalized(phoneNumber)
                 .orElseThrow(() -> new BusinessMcoException(McoErrorCode.USER_NOT_BOUND, "Пользователь не найден или не привязан"));
 
         if (!bindingStatus.isBound()) {
@@ -264,7 +264,7 @@ public class McoService {
     public void unbindUser(String phoneNumber, String unbindReason) {
         log.info("Отключение пользователя: {}", phoneNumber);
 
-        UserBindingStatus status = bindingStatusRepository.findByPhoneNumber(phoneNumber)
+        UserBindingStatus status = bindingStatusRepository.findByPhoneNumberNormalized(phoneNumber)
                 .orElseThrow(() -> new BusinessMcoException(
                         McoErrorCode.USER_NOT_BOUND,
                         "User not bound to partner"

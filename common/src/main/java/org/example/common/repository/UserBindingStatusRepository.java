@@ -18,6 +18,9 @@ public interface UserBindingStatusRepository extends JpaRepository<UserBindingSt
 
     Optional<UserBindingStatus> findByPhoneNumber(String phoneNumber);
 
+    @Query("SELECT ubs FROM UserBindingStatus ubs WHERE ubs.phoneNumber = :phone OR ubs.phoneNumber = REPLACE(:phone, '+', '')")
+    Optional<UserBindingStatus> findByPhoneNumberNormalized(@Param("phone") String phoneNumber);
+
     // Добавляем новый метод для создания или обновления статуса
     @Modifying
     @Query("UPDATE UserBindingStatus ubs SET ubs.bindingStatus = :status, ubs.boundAt = :boundAt, ubs.partnerConnected = true WHERE ubs.phoneNumber = :phoneNumber")

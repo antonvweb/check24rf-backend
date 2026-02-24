@@ -45,7 +45,7 @@ public class BindApprovalPollingService {
                     log.info("Заявка {} одобрена! Обновляем статус пользователя {}", requestId, phone);
 
                     // 1. Обновляем статус в таблице User
-                    userRepository.findByPhoneNumber(phone).ifPresent(user -> {
+                    userRepository.findByPhoneNumberNormalized(phone).ifPresent(user -> {
                         userRepository.save(user);
                         log.info("Статус партнерского подключения обновлен для пользователя {}", phone);
                     });

@@ -17,7 +17,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
           
           # Проверяем формат ключа
           echo "🔍 Checking key format..."
@@ -31,16 +31,16 @@ jobs:
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
               -o PubkeyAuthentication=yes \
-              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "echo ✅ SSH connected"
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "echo ✅ SSH connected"
 
       - name: 📤 Sync root files
         env:
           SSH_AUTH_SOCK: ""
         run: |
           rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
-            ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+            ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/
           rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
-            ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/
+            ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
       - name: 📤 Sync all modules
         env:
@@ -57,7 +57,7 @@ jobs:
               --exclude target \
               --exclude node_modules \
               ./$module/ \
-              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.DEPLOY_DEV_PATH }}/$module/
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/$module/
           done
 
       - name: 🔨 Build all modules on server (one-shot build)
@@ -67,9 +67,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
-              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
+            cd ${{ secrets.DEPLOY_PATH }}
 
             echo "🧹 Cleaning previous builds..."
             mvn clean -f pom.xml
@@ -87,9 +87,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
-              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+              ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
-            cd ${{ secrets.DEPLOY_DEV_PATH }}
+            cd ${{ secrets.DEPLOY_PATH }}
           
             echo "🔄 Restarting all services..."
             pm2 restart ecosystem.backend.config.js || pm2 start ecosystem.backend.config.js

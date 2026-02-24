@@ -233,12 +233,15 @@ public class McoApiClient {
     }
 
     public PostBindPartnerResponse bindUserSync(String phoneNumber, String requestId) {
+        // Нормализуем телефон - удаляем + для МЧО
+        String normalizedPhone = normalizePhoneNumber(phoneNumber);
+        
         log.info("Синхронное подключение пользователя: {}", phoneNumber);
 
         log.info("Формируем PostBindPartnerRequest: requestId = {}, userIdentifier = {}",
-                requestId, phoneNumber);
+                requestId, normalizedPhone);
 
-        SendMessageResponse messageResponse = bindUser(phoneNumber, requestId);
+        SendMessageResponse messageResponse = bindUser(normalizedPhone, requestId);
 
         log.info("Получен MessageId: {}, начинаем опрос результата...", messageResponse.getMessageId());
 
@@ -558,5 +561,15 @@ public class McoApiClient {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Прервано ожидание результата", e);
         }
+    }
+
+    /**
+     * Нормализация номера телефона - удаляет плюс для совместимости с МЧО
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null || phone.isEmpty()) {
+            return phone;
+        }
+        return phone.startsWith("+") ? phone.substring(1) : phone;
     }
 }

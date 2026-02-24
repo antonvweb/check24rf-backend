@@ -56,6 +56,9 @@ public class McoService {
             String externalItemId,
             String externalItemUrl
     ) {
+        // Нормализуем телефон - удаляем + для МЧО
+        String normalizedPhone = normalizePhoneNumber(phoneNumber);
+        
         UserBindingStatus bindingStatus = bindingStatusRepository.findByPhoneNumberNormalized(phoneNumber)
                 .orElseThrow(() -> new BusinessMcoException(McoErrorCode.USER_NOT_BOUND, "Пользователь не найден или не привязан"));
 
@@ -65,7 +68,7 @@ public class McoService {
 
         PostNotificationRequest request = PostNotificationRequest.builder()
                 .requestId(requestId)
-                .userIdentifier(phoneNumber)
+                .userIdentifier(normalizedPhone)
                 .notificationTitle(title)
                 .notificationMessage(message)
                 .shortMessage(shortMessage)
@@ -232,13 +235,15 @@ public class McoService {
 
     @Transactional
     public String connectUser(String phone) {
+        // Нормализуем телефон - удаляем + для МЧО
+        String normalizedPhone = normalizePhoneNumber(phone);
         String requestId = UUID.randomUUID().toString().toUpperCase();
 
         log.info("Создание заявки на подключение пользователя {}, RequestId: {}", phone, requestId);
 
         // Сначала создаем запись в UserBindingStatus со статусом PENDING
         UserBindingStatus initialStatus = UserBindingStatus.builder()
-                .phoneNumber(phone)
+                .phoneNumber(normalizedPhone)
                 .requestId(requestId)
                 .bindingStatus(UserBindingStatus.BindingStatus.PENDING)
                 .partnerConnected(false)
@@ -252,7 +257,7 @@ public class McoService {
         bindingStatusRepository.save(initialStatus);
         log.info("Создана начальная запись в user_binding_status для запроса {}", requestId);
 
-        PostBindPartnerResponse response = apiClient.bindUserSync(phone, requestId);
+        PostBindPartnerResponse response = apiClient.bindUserSync(normalizedPhone, requestId);
 
         log.info("Заявка на подключение отправлена");
         log.info("MessageId: {}", response.getMessageId());
@@ -262,6 +267,9 @@ public class McoService {
 
     @Transactional
     public void unbindUser(String phoneNumber, String unbindReason) {
+        // Нормализуем телефон - удаляем + для МЧО
+        String normalizedPhone = normalizePhoneNumber(phoneNumber);
+        
         log.info("Отключение пользователя: {}", phoneNumber);
 
         UserBindingStatus status = bindingStatusRepository.findByPhoneNumberNormalized(phoneNumber)
@@ -276,7 +284,7 @@ public class McoService {
         }
 
         PostUnbindPartnerRequest request = PostUnbindPartnerRequest.builder()
-                .userIdentifier(phoneNumber)
+                .userIdentifier(normalizedPhone)
                 .unbindReason(unbindReason)
                 .build();
 
@@ -412,5 +420,15 @@ public class McoService {
             log.error("Ошибка получения статистики", e);
             return "Ошибка: " + e.getMessage();
         }
+    }
+
+    /**
+     * Нормализация номера телефона - удаляет плюс для совместимости с МЧО
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null || phone.isEmpty()) {
+            return phone;
+        }
+        return phone.startsWith("+") ? phone.substring(1) : phone;
     }
 }

@@ -31,15 +31,16 @@ jobs:
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
               -o PubkeyAuthentication=yes \
+              -p 2222 \
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} "echo ✅ SSH connected"
 
       - name: 📤 Sync root files
         env:
           SSH_AUTH_SOCK: ""
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -p 2222" \
             ./pom.xml ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -p 2222" \
             ./ecosystem.backend.config.js ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
       - name: 📤 Sync all modules
@@ -47,11 +48,11 @@ jobs:
           SSH_AUTH_SOCK: ""
         run: |
           MODULES="mcoService common adminPanelService userService authService"
-          
+
           for module in $MODULES; do
             echo "📦 Syncing $module..."
             rsync -avz --delete \
-              -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey" \
+              -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -p 2222" \
               --exclude .git \
               --exclude .idea \
               --exclude target \
@@ -67,6 +68,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
+              -p 2222 \
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
@@ -87,14 +89,15 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
               -o IdentitiesOnly=yes \
               -o PreferredAuthentications=publickey \
+              -p 2222 \
               ${{ secrets.SSH_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-          
+
             echo "🔄 Restarting all services..."
             pm2 restart ecosystem.backend.config.js || pm2 start ecosystem.backend.config.js
             pm2 save
-          
+
             echo "📊 PM2 status:"
             pm2 list
           EOF

@@ -17,7 +17,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H -p 2222 ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
           
           # Проверяем формат ключа
           echo "🔍 Checking key format..."

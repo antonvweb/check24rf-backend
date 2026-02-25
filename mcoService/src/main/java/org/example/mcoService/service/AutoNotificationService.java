@@ -7,6 +7,7 @@ import org.example.mcoService.dto.response.PostNotificationResponse;
 import org.example.mcoService.enums.NotificationType;
 import org.example.mcoService.exception.McoException;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 /**
  * Сервис для автоматической отправки уведомлений.
@@ -15,10 +16,13 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AutoNotificationService {
 
     private final McoService mcoService;
+
+    public AutoNotificationService(@Lazy McoService mcoService) {
+        this.mcoService = mcoService;
+    }
 
     /**
      * Отправить уведомление о завершении подключения.

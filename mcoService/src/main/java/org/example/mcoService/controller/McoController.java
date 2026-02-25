@@ -11,6 +11,8 @@ import org.example.mcoService.exception.RetryableMcoException;
 import org.example.mcoService.service.BindApprovalPollingService;
 import org.example.mcoService.service.McoService;
 import org.example.mcoService.service.ReceiptService;
+import org.example.mcoService.service.UnboundUsersSyncScheduler;
+import org.example.mcoService.websocket.BindStatusWebSocketHandler;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,8 @@ public class McoController {
     private final McoService mcoService;
     private final ReceiptService receiptService;
     private final BindApprovalPollingService pollingService;
+    private final BindStatusWebSocketHandler webSocketHandler;
+    private final UnboundUsersSyncScheduler unboundUsersSyncScheduler;
 
     @GetMapping("/receipts/user")
     public ResponseEntity<ApiResponse<Page<ReceiptDto>>> getUserReceipts(
@@ -835,5 +839,70 @@ public class McoController {
                 "МЧО Сервис работает корректно",
                 null
         ));
+    }
+
+    /**
+     * Endpoint для тестирования WebSocket уведомлений.
+     * Отправляет тестовое уведомление подключенным WebSocket клиентам.
+     */
+    @PostMapping("/test-websocket-notification")
+    public ResponseEntity<ApiResponse<Object>> testWebSocketNotification(
+            @RequestParam String phone,
+            @RequestParam(defaultValue = "1") int count,
+            @RequestParam(defaultValue = "1000") String totalAmount) {
+
+        try {
+            log.info("Отправка тестового WebSocket уведомления для {}: {} чеков на {}", phone, count, totalAmount);
+            
+            webSocketHandler.sendNewReceiptsNotification(phone, count, totalAmount);
+            
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Тестовое уведомление отправлено. Проверьте WebSocket подключение на /ws/bind-status",
+                    Map.of("phone", phone, "count", count, "totalAmount", totalAmount)
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка отправки тестового уведомления", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
+    }
+
+    /**
+     * ТЕСТОВЫЙ endpoint для отключения пользователя.
+     * Отправляет WebSocket уведомление об отключении.
+     * В production будет использоваться реальный механизм отключения через МЧО.
+     */
+    @PostMapping("/test-unbind-user")
+    public ResponseEntity<ApiResponse<Object>> testUnbindUser(
+            @RequestParam String phone,
+            @RequestParam(required = false, defaultValue = "Пользователь отключился") String reason) {
+
+        try {
+            log.info("Тестовое отключение пользователя: {}", phone);
+
+            // Отправляем WebSocket уведомление об отключении
+            webSocketHandler.sendUnbindNotification(phone, reason);
+
+            // Запускаем синхронизацию отключившихся пользователей (удаление из БД)
+            // В реальном сценарии это произойдет автоматически при получении события от МЧО
+            log.info("Пользователь {} отключен. Причина: {}", phone, reason);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Тестовое отключение выполнено. Проверьте WebSocket подключение на /ws/unbind",
+                    Map.of(
+                            "phone", phone,
+                            "reason", reason,
+                            "timestamp", java.time.LocalDateTime.now().toString()
+                    )
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка тестового отключения пользователя", e);
+            return ResponseEntity.status(500).body(
+                    ApiResponse.error("Ошибка: " + e.getMessage())
+            );
+        }
     }
 }

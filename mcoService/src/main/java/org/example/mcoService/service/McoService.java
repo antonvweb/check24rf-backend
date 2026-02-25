@@ -16,6 +16,7 @@ import org.example.mcoService.exception.FatalMcoException;
 import org.example.mcoService.exception.McoErrorCode;
 import org.example.mcoService.exception.McoException;
 import org.example.common.repository.UserBindingStatusRepository;
+import org.example.mcoService.websocket.BindStatusWebSocketHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,9 @@ public class McoService {
     private final McoSoapClient soapClient;
     private final UserBindingStatusRepository bindingStatusRepository;
     private final NotificationTemplateService templateService;
+    private final ReceiptMarkerService receiptMarkerService;
+    private final BindStatusWebSocketHandler webSocketHandler;
+    private final AutoNotificationService autoNotificationService;
 
     public GetUnboundPartnerResponse getUnboundPartners(String marker) {
         return mcoApiClient.getUnboundPartners(marker);
@@ -241,6 +245,15 @@ public class McoService {
 
         log.info("Создание заявки на подключение пользователя {}, RequestId: {}", phone, requestId);
 
+        // Проверяем, был ли пользователь ранее подключен
+        bindingStatusRepository.findByPhoneNumberNormalized(normalizedPhone).ifPresent(existingStatus -> {
+            if (existingStatus.getBindingStatus() == UserBindingStatus.BindingStatus.UNBOUND) {
+                // Если пользователь был отключен, сбрасываем маркер на S_FROM_BEGINNING
+                receiptMarkerService.saveMarker(normalizedPhone, "S_FROM_BEGINNING");
+                log.info("Маркер сброшен на S_FROM_BEGINNING для пользователя {}", normalizedPhone);
+            }
+        });
+
         // Сначала создаем запись в UserBindingStatus со статусом PENDING
         UserBindingStatus initialStatus = UserBindingStatus.builder()
                 .phoneNumber(normalizedPhone)
@@ -321,12 +334,22 @@ public class McoService {
     }
 
     private void updateBindingStatus(UserBindingStatus status) {
+        String phone = status.getPhoneNumber();
+        
         status.setBindingStatus(UserBindingStatus.BindingStatus.UNBOUND);
         status.setPartnerConnected(false);
         status.setReceiptsEnabled(false);
         status.setNotificationsEnabled(false);
         status.setUnboundAt(LocalDateTime.now());
         bindingStatusRepository.save(status);
+        
+        // Отправляем WebSocket уведомление об отключении
+        webSocketHandler.sendUnbindNotification(phone, "Пользователь отключился");
+        
+        // Отправляем push-уведомление об отключении
+        autoNotificationService.sendUnbindingCompletedNotification(phone);
+        
+        log.info("Отправлены уведомления об отключении пользователя {}", phone);
     }
 
     public PostBindPartnerBatchResponse bindUsersBatch(String requestId, List<String> phoneNumbers) {

@@ -6,6 +6,7 @@ import org.example.common.entity.UserBindingStatus;
 import org.example.common.repository.UserBindingStatusRepository;
 import org.example.mcoService.dto.api.SaveReceiptsResult;
 import org.example.mcoService.dto.response.GetReceiptsTapeResponse;
+import org.example.mcoService.websocket.BindStatusWebSocketHandler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ public class ReceiptSyncScheduler {
     private final ReceiptMarkerService markerService;
     private final UserBindingStatusRepository bindingStatusRepository;
     private final AutoNotificationService autoNotificationService;
+    private final BindStatusWebSocketHandler webSocketHandler;
 
     @Scheduled(fixedDelay = 300_000)
     public void syncReceiptsForAllConnectedUsers() {
@@ -58,8 +60,16 @@ public class ReceiptSyncScheduler {
             log.info("Синхронизировано {} новых чеков для {} на сумму {}",
                     result.count(), phone, result.getTotalSumFormatted());
 
-            // Отправляем уведомление о новых чеках
+            // Отправляем уведомление о новых чеках (только если есть новые чеки)
             if (result.hasNewReceipts()) {
+                // WebSocket уведомление
+                webSocketHandler.sendNewReceiptsNotification(
+                        phone,
+                        result.count(),
+                        result.getTotalSumFormatted()
+                );
+                
+                // Push-уведомление
                 autoNotificationService.sendNewReceiptsNotification(
                         phone,
                         result.count(),

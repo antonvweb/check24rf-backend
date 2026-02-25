@@ -54,6 +54,39 @@ public class AutoNotificationService {
     }
 
     /**
+     * Отправить уведомление об отключении от сервиса.
+     * Вызывается автоматически при отключении пользователя от партнера.
+     *
+     * @param phoneNumber номер телефона пользователя
+     */
+    public void sendUnbindingCompletedNotification(String phoneNumber) {
+        log.info("Автоматическая отправка уведомления UNBINDING_COMPLETED для {}", phoneNumber);
+
+        try {
+            NotificationParams params = NotificationParams.builder()
+                    .phoneNumber(phoneNumber)
+                    .build();
+
+            PostNotificationResponse response = mcoService.sendTypedNotification(
+                    phoneNumber,
+                    NotificationType.UNBINDING_COMPLETED,
+                    params
+            );
+
+            log.info("Уведомление UNBINDING_COMPLETED успешно отправлено для {}, requestId: {}",
+                    phoneNumber, response.getRequestId());
+
+        } catch (McoException e) {
+            // Логируем, но не прерываем основной процесс
+            log.warn("Не удалось отправить уведомление UNBINDING_COMPLETED для {}: {} - {}",
+                    phoneNumber, e.getErrorCode().getCode(), e.getErrorMessage());
+        } catch (Exception e) {
+            log.error("Неожиданная ошибка при отправке уведомления UNBINDING_COMPLETED для {}",
+                    phoneNumber, e);
+        }
+    }
+
+    /**
      * Отправить напоминание о необходимости подтвердить заявку.
      * Может вызываться по расписанию для пользователей с незавершённым подключением.
      *

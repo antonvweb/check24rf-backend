@@ -306,6 +306,8 @@ public class NotificationDemoController {
                     "Напоминание о том, что чеки хранятся 5 дней и скоро будут удалены";
             case BINDING_COMPLETED ->
                     "Отправляется после успешного одобрения заявки на подключение";
+            case UNBINDING_COMPLETED ->
+                    "Отправляется когда пользователь отключился от партнера";
             case BINDING_REMINDER ->
                     "Напоминание о необходимости подтвердить заявку в ЛК МЧО";
             case SERVICE_UPDATE ->

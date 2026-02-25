@@ -7,6 +7,7 @@ import org.example.common.entity.UserBindingStatus;
 import org.example.mcoService.exception.RetryableMcoException;
 import org.example.common.repository.UserBindingStatusRepository;
 import org.example.common.repository.UserRepository;
+import org.example.mcoService.websocket.BindStatusWebSocketHandler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,9 @@ public class BindApprovalPollingService {
     private final UserRepository userRepository;
     private final UserBindingStatusRepository bindingStatusRepository;
     private final AutoNotificationService autoNotificationService;
+    private final BindStatusWebSocketHandler webSocketHandler;
+    private final ReceiptMarkerService receiptMarkerService;
+    private final ReceiptService receiptService;
 
     @Async
     @Transactional
@@ -60,7 +64,13 @@ public class BindApprovalPollingService {
                     log.info("Создана/обновлена запись в user_binding_status для пользователя {}, ID: {}",
                             phone, bindingStatus.getId());
 
-                    // 3. Отправляем уведомление о завершении подключения
+                    // 3. Отправляем WebSocket уведомление о подключении
+                    webSocketHandler.sendBindStatusNotification(requestId, "APPROVED", phone);
+
+                    // 4. Мгновенная синхронизация чеков после подключения
+                    syncReceiptsForUser(phone);
+
+                    // 5. Отправляем уведомление о завершении подключения (push)
                     autoNotificationService.sendBindingCompletedNotification(phone);
 
                     return;
@@ -76,6 +86,9 @@ public class BindApprovalPollingService {
                             bindingStatus
                     );
 
+                    // Отправляем WebSocket уведомление о статусе
+                    webSocketHandler.sendBindStatusNotification(requestId, result, phone);
+
                     return;
                 }
 
@@ -89,6 +102,7 @@ public class BindApprovalPollingService {
 
             } catch (Exception e) {
                 log.error("Критическая ошибка при проверке статуса заявки {}: {}", requestId, e.getMessage(), e);
+                webSocketHandler.sendErrorNotification(requestId, e.getMessage());
                 return;
             }
         }
@@ -100,6 +114,47 @@ public class BindApprovalPollingService {
                 requestId,
                 UserBindingStatus.BindingStatus.EXPIRED
         );
+        
+        webSocketHandler.sendBindStatusNotification(requestId, "EXPIRED", phone);
+    }
+
+    /**
+     * Мгновенная синхронизация чеков для пользователя после подключения
+     */
+    private void syncReceiptsForUser(String phone) {
+        try {
+            log.info("Мгновенная синхронизация чеков для пользователя {}", phone);
+            
+            // Получаем чеки с самого начала (S_FROM_BEGINNING)
+            String marker = "S_FROM_BEGINNING";
+            
+            var response = mcoService.getReceiptsByMarker(marker);
+            
+            if (response.getReceipts() != null && !response.getReceipts().isEmpty()) {
+                var userReceipts = response.getReceipts().stream()
+                        .filter(r -> phone.equals(r.getUserIdentifier()) || phone.equals(r.getPhone()))
+                        .toList();
+                
+                if (!userReceipts.isEmpty()) {
+                    var result = receiptService.saveReceipts(userReceipts);
+                    log.info("Синхронизировано {} новых чеков для {} на сумму {}",
+                            result.count(), phone, result.getTotalSumFormatted());
+                    
+                    // Отправляем WebSocket уведомление о новых чеках
+                    if (result.hasNewReceipts()) {
+                        webSocketHandler.sendNewReceiptsNotification(phone, result.count(), result.getTotalSumFormatted());
+                    }
+                }
+            }
+            
+            // Сохраняем последний маркер для последующей периодической синхронизации
+            if (response.getNextMarker() != null) {
+                receiptMarkerService.saveMarker(phone, response.getNextMarker());
+            }
+            
+        } catch (Exception e) {
+            log.error("Ошибка мгновенной синхронизации чеков для {}: {}", phone, e.getMessage());
+        }
     }
 
     private UserBindingStatus.BindingStatus mapResultToBindingStatus(String result) {

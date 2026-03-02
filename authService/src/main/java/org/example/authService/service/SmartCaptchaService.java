@@ -54,6 +54,12 @@ public class SmartCaptchaService {
     }
 
     public boolean validateCaptchaSync(String token, String userIP) {
+        // CAPTCHA отключена - всегда возвращаем true
+        if (StringUtils.isBlank(captchaProperties.getServerKey())) {
+            log.info("CAPTCHA disabled (no server key configured), skipping validation");
+            return true;
+        }
+
         try {
             Boolean result = validateCaptcha(token, userIP)
                     .defaultIfEmpty(false)

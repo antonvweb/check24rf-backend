@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.common.entity.User;
 import org.example.common.repository.UserRepository;
 import org.example.common.security.JwtUtil;
+import org.example.authService.utils.ValidationUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;

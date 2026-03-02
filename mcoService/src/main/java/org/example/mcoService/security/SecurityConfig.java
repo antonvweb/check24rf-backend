@@ -37,9 +37,8 @@ public class SecurityConfig {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/mco/send-code", "/api/mco/validate", "/actuator/**")
-                        .requireCsrfProtectionMatchers("/api/mco/verify", "/api/mco/logout", "/api/mco/refresh")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyTrue())
+                        .ignoringRequestMatchers("/api/mco/**", "/actuator/**")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

@@ -298,21 +298,7 @@ public class AuthController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         try {
-            String accessToken = null;
-            
-            // Пробуем получить из Authorization header
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                accessToken = authHeader.substring(7);
-            } else {
-                // Пытаемся получить из cookie
-                accessToken = Arrays.stream(Optional.ofNullable(request.getCookies()).orElse(new Cookie[0]))
-                        .filter(c -> "accessToken".equals(c.getName()))
-                        .findFirst()
-                        .map(Cookie::getValue)
-                        .orElse(null);
-            }
-
-            authService.logout(response, accessToken);
+            authService.logout(response, request);
 
             return ResponseEntity.ok(ApiResponse.<Void>builder()
                     .success(true)

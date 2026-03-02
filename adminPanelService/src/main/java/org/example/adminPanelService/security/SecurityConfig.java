@@ -27,9 +27,8 @@ public class SecurityConfig {
         return http
                 .cors(withDefaults())
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/admin-api/auth/**", "/admin-api/monitor/validate", "/actuator/**")
-                        .requireCsrfProtectionMatchers("/admin-api/monitor/verify", "/admin-api/monitor/logout", "/admin-api/admin/**")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyTrue())
+                        .ignoringRequestMatchers("/admin-api/**", "/actuator/**")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

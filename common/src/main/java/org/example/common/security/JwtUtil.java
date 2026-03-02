@@ -40,7 +40,9 @@ public class JwtUtil {
     private long refreshTokenExpiration;
 
     private SecretKey signingKey;
-    
+
+    @Autowired
+    @Qualifier("redisTemplate")
     private RedisTemplate<String, String> redisTemplate;
 
     @PostConstruct
@@ -266,13 +268,5 @@ public class JwtUtil {
         }
         String blacklistKey = BLACKLIST_PREFIX + token;
         return Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey));
-    }
-
-    /**
-     * Устанавливает RedisTemplate для работы с blacklist
-     */
-    @Autowired
-    public void setRedisTemplate(@Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate) {
-        this.redisTemplate = redisTemplate;
     }
 }

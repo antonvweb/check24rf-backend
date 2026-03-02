@@ -33,16 +33,10 @@ spring:
 
 cors:
   allowed-origins:
-    - "http://localhost:3000"
-    - "http://localhost:8082"
-    - "http://localhost:8083"
-    - "http://localhost:8085"
     - "https://чек24.рф"
     - "https://www.чек24.рф"
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
-    - "https://api.чек24.рф"
-    - "https://api.xn--24-mlcu7d.xn--p1ai"
 
 jwt:
   secret: ${JWT_SECRET}
@@ -105,19 +99,7 @@ logging:
 
     # JAXB marshalling
     org.springframework.oxm: DEBUG
-
-# Логирование для аудита безопасности
-logging:
-  level:
     AUDIT: INFO
-    org.example.mcoService: DEBUG
-    org.apache.http: DEBUG
-    org.apache.http.wire: DEBUG
-    org.springframework.ws: DEBUG
-    org.springframework.ws.client: DEBUG
-    org.springframework.ws.client.MessageTracing.sent: DEBUG
-    org.springframework.ws.client.MessageTracing.received: DEBUG
-    org.springframework.ws.server.MessageTracing: DEBUG
   file:
     name: /var/www/chech24rfapi/logs/mco-service.log
   pattern:

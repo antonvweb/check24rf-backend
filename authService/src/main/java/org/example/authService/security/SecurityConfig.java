@@ -42,7 +42,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/send-code", "/api/auth/verify", "/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/send-code", "/api/auth/verify", "/api/auth/verify-captcha", "/api/auth/refresh").permitAll()
                         .requestMatchers("/api/auth/validate", "/api/auth/logout").authenticated()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()

@@ -75,15 +75,25 @@ public class UserController {
      */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDetailResponse>> getCurrentUser(
-            @RequestHeader("Authorization") String authHeader) {
-        
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @CookieValue(name = "accessToken", required = false) String accessToken) {
+
         try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            String token = null;
+
+            // Пробуем получить из Authorization header
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.replace("Bearer ", "");
+            } else if (accessToken != null) {
+                // Если не в header, пробуем из cookie
+                token = accessToken;
+            }
+
+            if (token == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiResponse.error("Отсутствует токен авторизации"));
             }
-            
-            String token = authHeader.replace("Bearer ", "");
+
             UserDetailResponse user = userService.getUserDetailByToken(token);
             return ResponseEntity.ok(ApiResponse.success(user));
         } catch (Exception e) {
@@ -243,13 +253,23 @@ public class UserController {
      */
     @GetMapping("/is-active")
     public ResponseEntity<Map<String, Boolean>> getUserIsActive(
-            @RequestHeader("Authorization") String authHeader) {
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @CookieValue(name = "accessToken", required = false) String accessToken) {
+
+        String token = null;
+
+        // Пробуем получить из Authorization header
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.replace("Bearer ", "");
+        } else if (accessToken != null) {
+            // Если не в header, пробуем из cookie
+            token = accessToken;
+        }
+
+        if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String token = authHeader.replace("Bearer ", "");
         boolean isActive = userService.getUserIsActive(token);
         return ResponseEntity.ok(Map.of("isActive", isActive));
     }
@@ -260,13 +280,23 @@ public class UserController {
      */
     @GetMapping("/user")
     public ResponseEntity<UserResponse> getUser(
-            @RequestHeader("Authorization") String authHeader) {
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @CookieValue(name = "accessToken", required = false) String accessToken) {
+
+        String token = null;
+
+        // Пробуем получить из Authorization header
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.replace("Bearer ", "");
+        } else if (accessToken != null) {
+            // Если не в header, пробуем из cookie
+            token = accessToken;
+        }
+
+        if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String token = authHeader.replace("Bearer ", "");
         UserResponse user = userService.getUser(token);
         return ResponseEntity.ok(user);
     }
@@ -278,15 +308,25 @@ public class UserController {
     @PostMapping("/change-data")
     public ResponseEntity<ChangeAltDataResponse> changeData(
             @Valid @RequestBody ChangeAltDataRequest request,
-            @RequestHeader("Authorization") String authHeader) {
-        
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @CookieValue(name = "accessToken", required = false) String accessToken) {
+
         try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            String token = null;
+
+            // Пробуем получить из Authorization header
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.replace("Bearer ", "");
+            } else if (accessToken != null) {
+                // Если не в header, пробуем из cookie
+                token = accessToken;
+            }
+
+            if (token == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new ChangeAltDataResponse(false, "Отсутствует токен авторизации"));
             }
 
-            String token = authHeader.replace("Bearer ", "");
             boolean isChanged = userService.changeAltData(request.getType(), request.getData(), token);
 
             if (isChanged) {

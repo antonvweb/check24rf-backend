@@ -1,4 +1,4 @@
-package org.example.adminPanelService.config;
+package org.example.authService.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

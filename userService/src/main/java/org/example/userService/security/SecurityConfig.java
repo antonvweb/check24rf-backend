@@ -28,6 +28,10 @@ public class SecurityConfig {
         return http
                 .cors(cors -> cors.disable())
                 .csrf(csrf -> csrf.disable())
+                .securityMatcher(request -> {
+                    // Исключаем OPTIONS запросы из Spring Security
+                    return !"OPTIONS".equalsIgnoreCase(request.getMethod());
+                })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/**").authenticated()

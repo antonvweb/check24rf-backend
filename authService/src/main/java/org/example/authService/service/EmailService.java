@@ -26,18 +26,18 @@ public class EmailService {
     public void sendVerificationCode(String email, String code) {
         log.info("📧 Отправка кода на email через Telegram: {}, код: {}", email, code);
         
-        // Используем default chat id
+        // Для email используем default chat_id
         if (defaultChatId != null && !defaultChatId.isBlank()) {
             try {
                 Long chatId = Long.parseLong(defaultChatId);
                 telegramBotService.sendVerificationCode(chatId, code);
+                log.info("✉️ Код отправлен в Telegram (email: {}, chat_id: {})", email, defaultChatId);
                 return;
             } catch (NumberFormatException e) {
                 log.warn("Некорректный Telegram chat_id: {}", defaultChatId);
             }
         }
         
-        // Если default chat_id не настроен, отправляем всем
-        telegramBotService.broadcastMessage("🔐 Ваш код подтверждения: *" + code + "*");
+        log.warn("Telegram chat_id не настроен, код не будет отправлен");
     }
 }

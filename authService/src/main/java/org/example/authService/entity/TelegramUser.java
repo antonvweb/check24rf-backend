@@ -31,6 +31,9 @@ public class TelegramUser {
     @Column(name = "last_name")
     private String lastName;
 
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 

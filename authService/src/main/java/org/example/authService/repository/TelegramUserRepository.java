@@ -18,4 +18,6 @@ public interface TelegramUserRepository extends JpaRepository<TelegramUser, Long
     List<TelegramUser> findByIsActiveTrue();
 
     boolean existsByChatId(Long chatId);
+
+    Optional<TelegramUser> findByPhoneNumber(String phoneNumber);
 }

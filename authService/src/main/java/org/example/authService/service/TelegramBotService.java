@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Сервис для работы с Telegram ботом
@@ -65,10 +66,55 @@ public class TelegramBotService {
         // Сохраняем или обновляем пользователя
         saveOrUpdateUser(message.getFrom(), chatId);
 
+        // Проверяем, ждём ли мы номер телефона от этого пользователя
+        TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
+        
+        if (user != null && user.getPhoneNumber() == null && text != null) {
+            // Пользователь ещё не ввёл номер телефона - пытаемся сохранить
+            handlePhoneNumberInput(chatId, text, user);
+            return;
+        }
+
         // Обрабатываем команды
         if (text != null && text.startsWith("/")) {
             handleCommand(chatId, text);
         }
+    }
+
+    /**
+     * Обработка ввода номера телефона
+     */
+    @Transactional
+    private void handlePhoneNumberInput(Long chatId, String phoneNumber, TelegramUser user) {
+        log.info("Получен номер телефона от пользователя {}: {}", chatId, phoneNumber);
+
+        // Очищаем номер от лишних символов
+        String cleanPhone = phoneNumber.trim();
+        
+        // Проверяем формат номера
+        if (!cleanPhone.startsWith("+")) {
+            sendMessage(chatId, "❌ Номер телефона должен начинаться с + (например, +79051234567).\n\nПожалуйста, введите номер ещё раз:");
+            return;
+        }
+
+        // Проверяем, не занят ли номер другим пользователем
+        Optional<TelegramUser> existingUser = telegramUserRepository.findByPhoneNumber(cleanPhone);
+        if (existingUser.isPresent() && !existingUser.get().getChatId().equals(chatId)) {
+            sendMessage(chatId, "❌ Этот номер телефона уже привязан к другому пользователю.\n\nВведите другой номер или используйте команду /start заново:");
+            return;
+        }
+
+        // Сохраняем номер телефона
+        user.setPhoneNumber(cleanPhone);
+        telegramUserRepository.save(user);
+
+        sendMessage(chatId, "✅ Номер телефона *" + cleanPhone + "* успешно привязан!\n\n" +
+                "Теперь коды авторизации будут приходить в этот чат.\n\n" +
+                "Команды:\n" +
+                "/help - справка\n" +
+                "/start - начать заново");
+        
+        log.info("Номер телефона {} привязан к chat_id: {}", cleanPhone, chatId);
     }
 
     /**
@@ -95,7 +141,7 @@ public class TelegramBotService {
                             existingUser.setLastName(userDto.getLastName());
                             existingUser.setIsActive(true);
                             telegramUserRepository.save(existingUser);
-                            log.info("Обновлен пользователь Telegram: {}", chatId);
+                            log.debug("Обновлен пользователь Telegram: {}", chatId);
                         },
                         () -> {
                             TelegramUser newUser = new TelegramUser();
@@ -132,27 +178,55 @@ public class TelegramBotService {
      * Отправка приветственного сообщения на /start
      */
     private void sendStartMessage(Long chatId) {
-        String message = "👋 Привет! Я бот для авторизации в системе Чек24.\n\n" +
-                "🔐 Теперь коды авторизации будут приходить сюда.\n\n" +
-                "Команды:\n" +
-                "/help - справка\n" +
-                "/start - начать заново";
-
-        sendMessage(chatId, message);
-        log.info("Отправлено приветственное сообщение пользователю: {}", chatId);
+        // Проверяем, есть ли уже пользователь
+        TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
+        
+        if (user != null && user.getPhoneNumber() != null) {
+            // Пользователь уже привязал номер
+            String message = "👋 Привет! Вы уже авторизованы в системе Чек24.\n\n" +
+                    "Ваш номер телефона: *" + user.getPhoneNumber() + "*\n\n" +
+                    "Коды авторизации приходят в этот чат.\n\n" +
+                    "Команды:\n" +
+                    "/help - справка\n" +
+                    "/start - начать заново";
+            sendMessage(chatId, message);
+        } else {
+            // Новый пользователь или не ввёл номер
+            String message = "👋 Привет! Я бот для авторизации в системе Чек24.\n\n" +
+                    "🔐 Для получения кодов авторизации необходимо привязать номер телефона.\n\n" +
+                    "📱 *Пожалуйста, отправьте ваш номер телефона в формате:*\n" +
+                    "_+79051234567_\n\n" +
+                    "(начинается с плюса, без пробелов и скобок)";
+            sendMessage(chatId, message);
+        }
     }
 
     /**
      * Отправка справки на /help
      */
     private void sendHelpMessage(Long chatId) {
-        String message = "ℹ️ *Справка*\n\n" +
-                "Я бот для авторизации в системе Чек24.\n" +
-                "Когда вы запрашиваете код авторизации на сайте, " +
-                "он автоматически приходит в этот чат.\n\n" +
-                "*Команды:*\n" +
-                "/start - приветственное сообщение\n" +
-                "/help - эта справка";
+        TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
+        
+        String message;
+        if (user == null || user.getPhoneNumber() == null) {
+            message = "ℹ️ *Справка*\n\n" +
+                    "Я бот для авторизации в системе Чек24.\n" +
+                    "Когда вы запрашиваете код авторизации на сайте, " +
+                    "он автоматически приходит в этот чат.\n\n" +
+                    "⚠️ *Вы ещё не привязали номер телефона!*\n\n" +
+                    "📱 Отправьте ваш номер телефона в формате:\n" +
+                    "_+79051234567_\n\n" +
+                    "*Команды:*\n" +
+                    "/start - начать привязку номера";
+        } else {
+            message = "ℹ️ *Справка*\n\n" +
+                    "Я бот для авторизации в системе Чек24.\n" +
+                    "Когда вы запрашиваете код авторизации на сайте, " +
+                    "он автоматически приходит в этот чат.\n\n" +
+                    "✅ Ваш номер телефона: *" + user.getPhoneNumber() + "*\n\n" +
+                    "*Команды:*\n" +
+                    "/start - начать заново";
+        }
 
         sendMessage(chatId, message);
     }
@@ -165,12 +239,36 @@ public class TelegramBotService {
     }
 
     /**
-     * Отправить код подтверждения пользователю
+     * Отправить код подтверждения пользователю по chat_id
      */
     public void sendVerificationCode(Long chatId, String code) {
         String message = "🔐 Ваш код подтверждения: *" + code + "*\n\n" +
                 "_Не сообщайте код никому_";
         sendMessage(chatId, message);
+    }
+
+    /**
+     * Отправить код подтверждения пользователю по номеру телефона
+     */
+    @Transactional(readOnly = true)
+    public void sendVerificationCodeByPhone(String phoneNumber) {
+        telegramUserRepository.findByPhoneNumber(phoneNumber)
+                .ifPresentOrElse(
+                        user -> {
+                            // Код будет отправлен из AuthService
+                            log.info("Найден пользователь для номера {}: chat_id={}", phoneNumber, user.getChatId());
+                        },
+                        () -> log.warn("Пользователь с номером {} не найден в Telegram", phoneNumber)
+                );
+    }
+
+    /**
+     * Получить chat_id по номеру телефона
+     */
+    @Transactional(readOnly = true)
+    public Optional<Long> getChatIdByPhoneNumber(String phoneNumber) {
+        return telegramUserRepository.findByPhoneNumber(phoneNumber)
+                .map(TelegramUser::getChatId);
     }
 
     /**
@@ -229,13 +327,6 @@ public class TelegramBotService {
         for (TelegramUser user : activeUsers) {
             sendMessage(user.getChatId(), text);
         }
-    }
-
-    /**
-     * Отправить код всем пользователям (для тестирования)
-     */
-    public void broadcastCode(String code) {
-        broadcastMessage("🔐 Тестовый код: *" + code + "*");
     }
 
     /**

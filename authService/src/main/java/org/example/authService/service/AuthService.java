@@ -98,28 +98,50 @@ public class AuthService {
         log.info("💾 Код сохранен в Redis с ключом: {}", redisKey);
 
         // Отправляем код через Telegram Bot
-        sendCodeViaTelegram(code);
+        sendCodeViaTelegram(cleanIdentifier, code);
     }
 
     /**
      * Отправка кода через Telegram Bot
      */
-    private void sendCodeViaTelegram(String code) {
-        // Если есть default chat id - отправляем туда
+    private void sendCodeViaTelegram(String identifier, String code) {
+        // Пытаемся найти пользователя по номеру телефона в Telegram
+        String phoneForLookup = identifier.contains("@") ? null : identifier;
+        
+        if (phoneForLookup != null) {
+            // Ищем по номеру телефона
+            telegramBotService.getChatIdByPhoneNumber(phoneForLookup)
+                    .ifPresentOrElse(
+                            chatId -> {
+                                telegramBotService.sendVerificationCode(chatId, code);
+                                log.info("✉️ Код отправлен в Telegram (chat_id: {}, phone: {})", chatId, phoneForLookup);
+                            },
+                            () -> {
+                                // Пользователь не найден в Telegram - отправляем на default chat_id если есть
+                                sendCodeToDefaultChat(code, identifier);
+                            }
+                    );
+        } else {
+            // Email - отправляем на default chat_id
+            sendCodeToDefaultChat(code, identifier);
+        }
+    }
+
+    /**
+     * Отправка кода на default chat_id (если пользователь не найден в Telegram)
+     */
+    private void sendCodeToDefaultChat(String code, String identifier) {
         if (defaultChatId != null && !defaultChatId.isBlank()) {
             try {
                 Long chatId = Long.parseLong(defaultChatId);
                 telegramBotService.sendVerificationCode(chatId, code);
-                log.info("✉️ Код отправлен в Telegram (chat_id: {})", defaultChatId);
-                return;
+                log.info("✉️ Код отправлен в Telegram (default chat_id: {}, identifier: {})", defaultChatId, identifier);
             } catch (NumberFormatException e) {
                 log.warn("Некорректный Telegram chat_id: {}", defaultChatId);
             }
+        } else {
+            log.warn("Telegram chat_id не настроен, код не будет отправлен");
         }
-        
-        // Если default chat_id не настроен, отправляем всем пользователям
-        log.info("✉️ Отправка кода всем пользователям Telegram");
-        telegramBotService.broadcastMessage("🔐 Ваш код подтверждения: *" + code + "*");
     }
 
     /**

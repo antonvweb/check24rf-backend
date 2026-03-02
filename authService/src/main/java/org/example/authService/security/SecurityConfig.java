@@ -45,7 +45,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                // Отключаем CORS в Spring — nginx обрабатывает
                 .cors(cors -> cors.disable())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/actuator/**")

@@ -14,6 +14,13 @@
     <artifactId>authService</artifactId>
 
     <dependencies>
+        <!-- Common module -->
+        <dependency>
+            <groupId>org.example</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

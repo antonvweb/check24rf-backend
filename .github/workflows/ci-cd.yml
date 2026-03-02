@@ -101,6 +101,7 @@ jobs:
           ADMIN_SERVICE_PORT=${{ secrets.PROD_ADMIN_SERVICE_PORT }}
           MCO_API_TOKEN=${{ secrets.PROD_MCO_API_TOKEN }}
           SMARTCAPTCHA_SERVER_KEY=${{ secrets.PROD_SMARTCAPTCHA_SERVER_KEY }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           ENVEOF
           chmod 600 .env
           chown ${{ secrets.PROD_SERVER_USER }}:${{ secrets.PROD_SERVER_USER }} .env

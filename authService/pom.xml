@@ -101,6 +101,13 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
 
+        <!-- Telegram Bot Library -->
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots</artifactId>
+            <version>6.9.7.1</version>
+        </dependency>
+
         <!-- Google Guava для Rate Limiting -->
         <dependency>
             <groupId>com.google.guava</groupId>

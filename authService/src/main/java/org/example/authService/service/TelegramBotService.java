@@ -1,7 +1,5 @@
 package org.example.authService.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.authService.entity.TelegramUser;
 import org.example.authService.repository.TelegramUserRepository;
@@ -9,114 +7,60 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URI;
-import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 
 /**
- * Telegram бот с long polling
- * Работает внутри authService, опрашивает Telegram API
+ * Telegram бот на базе библиотеки TelegramBots
+ * Использует long polling — библиотека сама опрашивает Telegram
  */
 @Slf4j
 @Service
-public class TelegramBotService implements CommandLineRunner {
-
-    @Value("${telegram.bot.token}")
-    private String botToken;
+public class TelegramBotService extends TelegramLongPollingBot implements CommandLineRunner {
 
     private final TelegramUserRepository telegramUserRepository;
-    private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
+    private final String botToken;
 
-    public TelegramBotService(TelegramUserRepository telegramUserRepository, ObjectMapper objectMapper) {
+    public TelegramBotService(
+            TelegramUserRepository telegramUserRepository,
+            @Value("${telegram.bot.token}") String botToken) {
+        super(botToken);
         this.telegramUserRepository = telegramUserRepository;
-        this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        this.botToken = botToken;
     }
 
     @Override
     public void run(String... args) throws Exception {
         log.info("🤖 Telegram бот запускается...");
+
+        // Регистрируем бота
+        TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+        botsApi.registerBot(this);
         
-        // Удаляем webhook если был
-        deleteWebhook();
-        
-        // Запускаем long polling в отдельном потоке
-        new Thread(this::startPolling).start();
+        log.info("✅ Бот зарегистрирован и готов к работе");
     }
 
-    private void deleteWebhook() {
-        try {
-            String url = "https://api.telegram.org/bot" + botToken + "/deleteWebhook";
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            log.info("✅ Webhook удален: {}", response.body());
-        } catch (Exception e) {
-            log.warn("⚠️ Не удалось удалить webhook: {}", e.getMessage());
-        }
-    }
-
-    private void startPolling() {
-        log.info("🔄 Long polling запущен...");
-        Integer offset = null;
-
-        while (true) {
-            try {
-                String url = "https://api.telegram.org/bot" + botToken + "/getUpdates";
-                if (offset != null) {
-                    url += "?offset=" + (offset + 1);
-                }
-
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .timeout(Duration.ofSeconds(30))
-                        .build();
-
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                JsonNode jsonNode = objectMapper.readTree(response.body());
-
-                if (jsonNode.has("result")) {
-                    for (JsonNode update : jsonNode.get("result")) {
-                        offset = update.get("update_id").asInt();
-                        handleUpdate(update);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("❌ Ошибка polling: {}", e.getMessage());
-                try { Thread.sleep(5000); } catch (InterruptedException ie) {}
-            }
+    @Override
+    @Transactional
+    public void onUpdateReceived(Update update) {
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            handleMessage(update.getMessage());
         }
     }
 
     @Transactional
-    public void handleUpdate(JsonNode update) {
-        if (update.has("message")) {
-            handleMessage(update.get("message"));
-        }
-    }
-
-    @Transactional
-    public void handleMessage(JsonNode message) {
-        if (!message.has("from") || !message.has("chat")) return;
-
-        Long chatId = message.get("chat").get("id").asLong();
-        Long userId = message.get("from").get("id").asLong();
-        String username = message.get("from").has("username")
-                ? message.get("from").get("username").asText() : null;
-        String firstName = message.get("from").has("first_name")
-                ? message.get("from").get("first_name").asText() : null;
-        String text = message.has("text") ? message.get("text").asText() : null;
+    public void handleMessage(org.telegram.telegrambots.meta.api.objects.Message message) {
+        Long chatId = message.getChatId();
+        Long userId = message.getFrom().getId();
+        String username = message.getFrom().getUserName();
+        String firstName = message.getFrom().getFirstName();
+        String text = message.getText();
 
         log.info("📨 Сообщение от {}: {}", chatId, text);
 
@@ -132,7 +76,6 @@ public class TelegramBotService implements CommandLineRunner {
             telegramUserRepository.save(user);
             log.info("✨ Новый пользователь: {}", chatId);
         } else {
-            // Обновляем данные
             user.setUsername(username);
             user.setFirstName(firstName);
             telegramUserRepository.save(user);
@@ -234,46 +177,26 @@ public class TelegramBotService implements CommandLineRunner {
      * Отправить сообщение пользователю
      */
     public void sendMessage(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+        message.enableMarkdown(true);
+
         try {
-            String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
-            
-            Map<String, Object> body = Map.of(
-                    "chat_id", chatId,
-                    "text", text,
-                    "parse_mode", "Markdown"
-            );
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .header("Content-Type", "application/json")
-                    .build();
-
-            // Асинхронная отправка
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        try {
-                            JsonNode resp = objectMapper.readTree(response.body());
-                            if (!resp.has("ok") || !resp.get("ok").asBoolean()) {
-                                log.error("❌ Ошибка отправки в Telegram: {}", response.body());
-                            }
-                        } catch (Exception e) {
-                            log.error("❌ Ошибка парсинга ответа: {}", e.getMessage());
-                        }
-                        return response;
-                    });
-        } catch (Exception e) {
-            log.error("❌ Ошибка отправки сообщения: {}", e.getMessage());
+            execute(message);
+            log.debug("✅ Сообщение отправлено в {}", chatId);
+        } catch (TelegramApiException e) {
+            log.error("❌ Ошибка отправки сообщения в {}: {}", chatId, e.getMessage());
         }
     }
 
-    /**
-     * Получить chat_id по номеру телефона
-     */
-    @Transactional(readOnly = true)
-    public Long getChatIdByPhone(String phone) {
-        return telegramUserRepository.findByPhoneNumber(phone)
-                .map(TelegramUser::getChatId)
-                .orElse(null);
+    @Override
+    public String getBotUsername() {
+        return "Check24Bot"; // любое имя
+    }
+
+    @Override
+    public String getBotToken() {
+        return botToken;
     }
 }

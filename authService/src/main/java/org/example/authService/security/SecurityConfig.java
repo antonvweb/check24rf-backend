@@ -68,12 +68,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(corsProperties.getAllowedOrigins());
+        // Жёстко задаём разрешённые origins для профиля docker
+        configuration.setAllowedOriginPatterns(List.of(
+                "https://xn--24-mlcu7d.xn--p1ai",
+                "https://www.xn--24-mlcu7d.xn--p1ai"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("Content-Type", "Authorization", "X-CSRF-TOKEN"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        configuration.setExposedHeaders(List.of("X-CSRF-TOKEN"));
+        configuration.setExposedHeaders(List.of("X-CSRF-TOKEN", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

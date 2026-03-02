@@ -28,16 +28,10 @@ spring:
 
 cors:
   allowed-origins:
-    - "http://localhost:3000"
-    - "http://localhost:8082"
-    - "http://localhost:8083"
-    - "http://localhost:8085"
     - "https://чек24.рф"
     - "https://www.чек24.рф"
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
-    - "https://api.чек24.рф"
-    - "https://api.xn--24-mlcu7d.xn--p1ai"
 
 jwt:
   secret: ${JWT_SECRET}

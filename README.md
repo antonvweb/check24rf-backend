@@ -55,14 +55,16 @@
 
 ## 📦 Сервисы
 
-| Сервис | Порт | Описание | Особенности |
-|--------|------|----------|-------------|
-| authService | 18273 | Аутентификация, JWT, SMS/Email коды | Bucket4j rate limiting |
-| userService | 19384 | Управление пользователями | |
-| mcoService | 17456 | Интеграция с МЧО (SOAP, WebSocket) | WebSocket поддержка |
-| adminPanelService | 16542 | Админ-панель (без Docker) | На хосте |
-| PostgreSQL | 15433 | База данных | Auto backup 3:00 |
-| Redis | 16380 | Кэш, сессии, blacklist токенов | AOF+RDB персистентность |
+| Сервис | Порт | RAM | Описание | Особенности |
+|--------|------|-----|----------|-------------|
+| authService | 18273 | 1 GB | Аутентификация, JWT, SMS/Email коды | Bucket4j rate limiting |
+| userService | 19384 | 1 GB | Управление пользователями | |
+| mcoService | 17456 | 4 GB | Интеграция с МЧО (SOAP, WebSocket) | WebSocket поддержка |
+| adminPanelService | 16542 | 512 MB | Админ-панель (без Docker) | На хосте |
+| PostgreSQL | 15433 | - | База данных | Auto backup 3:00 |
+| Redis | 16380 | 256 MB | Кэш, сессии, blacklist токенов | AOF+RDB персистентность |
+
+**Итого:** ~7 GB RAM на сервисы (на сервере 32 GB)
 
 ## 🔒 Безопасность
 
@@ -371,22 +373,38 @@ Swagger UI доступен для каждого сервиса:
 
 ### Настройка GitHub Secrets:
 
-1. **SERVER_HOST** — IP адрес сервера
-2. **SERVER_USER** — пользователь (checkadm)
-3. **SSH_PRIVATE_KEY** — приватный SSH ключ
-4. **SSH_PORT** — порт SSH (47483)
+| Secret | Описание | Пример |
+|--------|----------|--------|
+| `PROD_SERVER_HOST` | IP адрес сервера | `95.213.143.142` |
+| `PROD_SERVER_USER` | пользователь SSH | `checkadm` |
+| `PROD_SSH_PRIVATE_KEY` | приватный SSH ключ | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `PROD_SSH_PORT` | порт SSH | `47483` |
+| `PROD_DB_PORT` | порт PostgreSQL | `15433` |
+| `PROD_DB_NAME` | имя БД | `check_rf` |
+| `PROD_DB_USER` | пользователь БД | `check_user` |
+| `PROD_DB_PASSWORD` | пароль БД | `secure123...` |
+| `PROD_REDIS_PORT` | порт Redis | `16380` |
+| `PROD_REDIS_PASSWORD` | пароль Redis | `redis123...` |
+| `PROD_JWT_SECRET` | JWT секрет (64+ символов) | `abc123...` |
+| `PROD_AUTH_SERVICE_PORT` | порт authService | `18273` |
+| `PROD_USER_SERVICE_PORT` | порт userService | `19384` |
+| `PROD_MCO_SERVICE_PORT` | порт mcoService | `17456` |
+| `PROD_ADMIN_SERVICE_PORT` | порт adminPanel | `16542` |
+| `PROD_MCO_API_TOKEN` | токен ФНС МЧО | `chek24_...` |
+| `PROD_SMARTCAPTCHA_SERVER_KEY` | ключ SmartCaptcha | `ysc2_...` |
 
 ### Workflow:
 
-- **Push в develop:** сборка, тесты, security scan, deploy на dev
-- **Push в main:** сборка, тесты, security scan, backup БД, deploy на prod
+- **Push в main/develop:** сборка → build Docker образов → deploy на сервер
 
 ### Ручной deploy:
 
 ```bash
 # На сервере
 cd /var/www/chech24rfapi
-docker compose pull
+git pull origin main
+docker compose down
+docker compose build --no-cache
 docker compose up -d
 docker system prune -f
 ```

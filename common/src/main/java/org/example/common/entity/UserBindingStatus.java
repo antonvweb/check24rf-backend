@@ -21,7 +21,6 @@ public class UserBindingStatus {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-
     @Column(name = "phone_number", unique = true, nullable = false)
     private String phoneNumber;
 

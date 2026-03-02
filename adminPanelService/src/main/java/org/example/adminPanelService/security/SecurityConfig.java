@@ -25,11 +25,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .cors(withDefaults())
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/admin-api/**", "/actuator/**")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                )
+                .cors(cors -> cors.disable())
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/admin-api/auth/**").permitAll()

@@ -22,6 +22,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(webSocketHandler, "/ws/notifications")
                 .setAllowedOrigins("*");
         
-        log.info("WebSocket обработчик зарегистрирован на /ws/notifications");
+        // Дополнительный endpoint для совместимости
+        registry.addHandler(webSocketHandler, "/ws")
+                .setAllowedOrigins("*");
+
+        log.info("WebSocket обработчик зарегистрирован на /ws/notifications и /ws");
     }
 }

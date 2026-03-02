@@ -108,14 +108,16 @@
             <version>6.9.7.1</version>
         </dependency>
 
-        <!-- JAXB API for Java 11+ -->
+        <!-- JAXB API for Java 11+ (старая javax.xml.bind для совместимости с Jackson) -->
         <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
         </dependency>
         <dependency>
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.9</version>
         </dependency>
 
         <!-- Google Guava для Rate Limiting -->

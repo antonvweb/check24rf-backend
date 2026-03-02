@@ -10,10 +10,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         "org.example.authService"
 })
 @EntityScan(basePackages = {
-        "org.example.common.entity"        // Entity из common модуля
+        "org.example.common.entity",
+        "org.example.authService.entity"
 })
 @EnableJpaRepositories(basePackages = {
-        "org.example.common.repository"       // Repository из common модуля
+        "org.example.common.repository",
+        "org.example.authService.repository"
 })
 public class AuthServiceApplication {
     public static void main(String[] args) {

@@ -33,8 +33,7 @@ public class SecurityConfig {
             "/api/auth/verify",
             "/api/auth/verify-captcha",
             "/api/auth/refresh",
-            "/api/auth/csrf-token",
-            "/api/telegram/**"  // Telegram webhook
+            "/api/auth/csrf-token"
     );
 
     @Bean

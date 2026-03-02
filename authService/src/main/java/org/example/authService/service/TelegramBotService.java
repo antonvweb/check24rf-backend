@@ -3,359 +3,277 @@ package org.example.authService.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.example.authService.dto.TelegramUpdate;
 import org.example.authService.entity.TelegramUser;
 import org.example.authService.repository.TelegramUserRepository;
-import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.util.List;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * Сервис для работы с Telegram ботом
+ * Telegram бот с long polling
+ * Работает внутри authService, опрашивает Telegram API
  */
 @Slf4j
 @Service
-public class TelegramBotService {
+public class TelegramBotService implements CommandLineRunner {
 
-    private final WebClient webClient;
-    private final String botToken;
+    @Value("${telegram.bot.token}")
+    private String botToken;
+
     private final TelegramUserRepository telegramUserRepository;
     private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
-    public TelegramBotService(
-            WebClient webClient,
-            @org.springframework.beans.factory.annotation.Value("${telegram.bot.token:}") String botToken,
-            TelegramUserRepository telegramUserRepository,
-            ObjectMapper objectMapper) {
-        this.webClient = webClient;
-        this.botToken = botToken;
+    public TelegramBotService(TelegramUserRepository telegramUserRepository, ObjectMapper objectMapper) {
         this.telegramUserRepository = telegramUserRepository;
         this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
     }
 
-    /**
-     * Обработка входящего обновления от Telegram
-     */
-    @Transactional
-    public void handleUpdate(TelegramUpdate update) {
-        if (update.getMessage() != null) {
-            handleMessage(update.getMessage());
-        } else if (update.getCallbackQuery() != null) {
-            handleCallbackQuery(update.getCallbackQuery());
+    @Override
+    public void run(String... args) throws Exception {
+        log.info("🤖 Telegram бот запускается...");
+        
+        // Удаляем webhook если был
+        deleteWebhook();
+        
+        // Запускаем long polling в отдельном потоке
+        new Thread(this::startPolling).start();
+    }
+
+    private void deleteWebhook() {
+        try {
+            String url = "https://api.telegram.org/bot" + botToken + "/deleteWebhook";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            log.info("✅ Webhook удален: {}", response.body());
+        } catch (Exception e) {
+            log.warn("⚠️ Не удалось удалить webhook: {}", e.getMessage());
         }
     }
 
-    /**
-     * Обработка сообщения
-     */
-    @Transactional
-    public void handleMessage(org.example.authService.dto.TelegramMessage message) {
-        if (message == null || message.getFrom() == null || message.getChat() == null) {
-            return;
+    private void startPolling() {
+        log.info("🔄 Long polling запущен...");
+        Integer offset = null;
+
+        while (true) {
+            try {
+                String url = "https://api.telegram.org/bot" + botToken + "/getUpdates";
+                if (offset != null) {
+                    url += "?offset=" + (offset + 1);
+                }
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .GET()
+                        .timeout(Duration.ofSeconds(30))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                JsonNode jsonNode = objectMapper.readTree(response.body());
+
+                if (jsonNode.has("result")) {
+                    for (JsonNode update : jsonNode.get("result")) {
+                        offset = update.get("update_id").asInt();
+                        handleUpdate(update);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("❌ Ошибка polling: {}", e.getMessage());
+                try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+            }
         }
+    }
 
-        Long chatId = message.getChat().getId();
-        String text = message.getText();
+    @Transactional
+    public void handleUpdate(JsonNode update) {
+        if (update.has("message")) {
+            handleMessage(update.get("message"));
+        }
+    }
 
-        // Сохраняем или обновляем пользователя
-        saveOrUpdateUser(message.getFrom(), chatId);
+    @Transactional
+    public void handleMessage(JsonNode message) {
+        if (!message.has("from") || !message.has("chat")) return;
 
-        // Проверяем, ждём ли мы номер телефона от этого пользователя
+        Long chatId = message.get("chat").get("id").asLong();
+        Long userId = message.get("from").get("id").asLong();
+        String username = message.get("from").has("username")
+                ? message.get("from").get("username").asText() : null;
+        String firstName = message.get("from").has("first_name")
+                ? message.get("from").get("first_name").asText() : null;
+        String text = message.has("text") ? message.get("text").asText() : null;
+
+        log.info("📨 Сообщение от {}: {}", chatId, text);
+
+        // Сохраняем пользователя
         TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
         
-        if (user != null && user.getPhoneNumber() == null && text != null) {
-            // Пользователь ещё не ввёл номер телефона - пытаемся сохранить
-            handlePhoneNumberInput(chatId, text, user);
-            return;
+        if (user == null) {
+            user = new TelegramUser();
+            user.setChatId(chatId);
+            user.setUsername(username);
+            user.setFirstName(firstName);
+            user.setIsActive(true);
+            telegramUserRepository.save(user);
+            log.info("✨ Новый пользователь: {}", chatId);
+        } else {
+            // Обновляем данные
+            user.setUsername(username);
+            user.setFirstName(firstName);
+            telegramUserRepository.save(user);
         }
 
         // Обрабатываем команды
-        if (text != null && text.startsWith("/")) {
-            handleCommand(chatId, text);
+        if (text != null) {
+            if ("/start".equals(text)) {
+                handleStart(chatId, user);
+                return;
+            }
+            if ("/help".equals(text)) {
+                handleHelp(chatId, user);
+                return;
+            }
+
+            // Если номер не привязан - сохраняем как номер телефона
+            if (user.getPhoneNumber() == null && !text.startsWith("/")) {
+                handlePhoneInput(chatId, user, text);
+                return;
+            }
         }
     }
 
-    /**
-     * Обработка ввода номера телефона
-     */
-    @Transactional
-    private void handlePhoneNumberInput(Long chatId, String phoneNumber, TelegramUser user) {
-        log.info("Получен номер телефона от пользователя {}: {}", chatId, phoneNumber);
+    private void handleStart(Long chatId, TelegramUser user) {
+        if (user.getPhoneNumber() != null) {
+            sendMessage(chatId, "👋 Привет!\n\n" +
+                    "Ваш номер: *" + user.getPhoneNumber() + "*\n\n" +
+                    "Коды авторизации приходят в этот чат.\n\n" +
+                    "/help - справка");
+        } else {
+            sendMessage(chatId, "👋 Привет! Я бот для авторизации в Чек24.\n\n" +
+                    "📱 *Отправьте ваш номер телефона:*\n" +
+                    "_+79051234567_\n\n" +
+                    "(с плюсом, без пробелов и скобок)");
+        }
+    }
 
-        // Очищаем номер от лишних символов
-        String cleanPhone = phoneNumber.trim();
+    private void handleHelp(Long chatId, TelegramUser user) {
+        if (user.getPhoneNumber() == null) {
+            sendMessage(chatId, "ℹ️ *Справка*\n\n" +
+                    "Отправьте номер телефона в формате:\n" +
+                    "_+79051234567_\n\n" +
+                    "После этого коды авторизации будут приходить в этот чат.");
+        } else {
+            sendMessage(chatId, "ℹ️ *Справка*\n\n" +
+                    "Ваш номер: *" + user.getPhoneNumber() + "*\n\n" +
+                    "Когда запрашиваете код на сайте - он приходит в этот чат.\n\n" +
+                    "/start - начать заново");
+        }
+    }
+
+    private void handlePhoneInput(Long chatId, TelegramUser user, String phone) {
+        String cleanPhone = phone.trim();
         
-        // Проверяем формат номера
         if (!cleanPhone.startsWith("+")) {
-            sendMessage(chatId, "❌ Номер телефона должен начинаться с + (например, +79051234567).\n\nПожалуйста, введите номер ещё раз:");
+            sendMessage(chatId, "❌ Номер должен начинаться с +\n\n" +
+                    "Пример: _+79051234567_\n\n" +
+                    "Введите ещё раз:");
             return;
         }
 
         // Проверяем, не занят ли номер другим пользователем
-        Optional<TelegramUser> existingUser = telegramUserRepository.findByPhoneNumber(cleanPhone);
-        if (existingUser.isPresent() && !existingUser.get().getChatId().equals(chatId)) {
-            sendMessage(chatId, "❌ Этот номер телефона уже привязан к другому пользователю.\n\nВведите другой номер или используйте команду /start заново:");
+        Optional<TelegramUser> existing = telegramUserRepository.findByPhoneNumber(cleanPhone);
+        if (existing.isPresent() && !existing.get().getChatId().equals(chatId)) {
+            sendMessage(chatId, "❌ Этот номер уже привязан к другому пользователю.\n\n" +
+                    "Введите другой номер или используйте /start:");
             return;
         }
 
-        // Сохраняем номер телефона
         user.setPhoneNumber(cleanPhone);
         telegramUserRepository.save(user);
-
-        sendMessage(chatId, "✅ Номер телефона *" + cleanPhone + "* успешно привязан!\n\n" +
+        
+        sendMessage(chatId, "✅ Номер *" + cleanPhone + "* привязан!\n\n" +
                 "Теперь коды авторизации будут приходить в этот чат.\n\n" +
-                "Команды:\n" +
-                "/help - справка\n" +
-                "/start - начать заново");
+                "/help - справка");
         
-        log.info("Номер телефона {} привязан к chat_id: {}", cleanPhone, chatId);
-    }
-
-    /**
-     * Обработка callback query (нажатия на кнопки)
-     */
-    public void handleCallbackQuery(org.example.authService.dto.TelegramCallbackQuery callbackQuery) {
-        if (callbackQuery == null || callbackQuery.getFrom() == null) {
-            return;
-        }
-
-        log.info("Получен callback query от пользователя: {}", callbackQuery.getFrom().getId());
-        // Можно добавить обработку кнопок
-    }
-
-    /**
-     * Сохранение или обновление пользователя в БД
-     */
-    private void saveOrUpdateUser(org.example.authService.dto.TelegramUserDto userDto, Long chatId) {
-        telegramUserRepository.findByChatId(chatId)
-                .ifPresentOrElse(
-                        existingUser -> {
-                            existingUser.setUsername(userDto.getUsername());
-                            existingUser.setFirstName(userDto.getFirstName());
-                            existingUser.setLastName(userDto.getLastName());
-                            existingUser.setIsActive(true);
-                            telegramUserRepository.save(existingUser);
-                            log.debug("Обновлен пользователь Telegram: {}", chatId);
-                        },
-                        () -> {
-                            TelegramUser newUser = new TelegramUser();
-                            newUser.setChatId(chatId);
-                            newUser.setUsername(userDto.getUsername());
-                            newUser.setFirstName(userDto.getFirstName());
-                            newUser.setLastName(userDto.getLastName());
-                            newUser.setIsActive(true);
-                            telegramUserRepository.save(newUser);
-                            log.info("Зарегистрирован новый пользователь Telegram: {}", chatId);
-                        }
-                );
-    }
-
-    /**
-     * Обработка команд бота
-     */
-    private void handleCommand(Long chatId, String command) {
-        log.info("Получена команда: {} от пользователя: {}", command, chatId);
-
-        switch (command.toLowerCase()) {
-            case "/start":
-                sendStartMessage(chatId);
-                break;
-            case "/help":
-                sendHelpMessage(chatId);
-                break;
-            default:
-                sendUnknownCommandMessage(chatId);
-        }
-    }
-
-    /**
-     * Отправка приветственного сообщения на /start
-     */
-    private void sendStartMessage(Long chatId) {
-        // Проверяем, есть ли уже пользователь
-        TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
-        
-        if (user != null && user.getPhoneNumber() != null) {
-            // Пользователь уже привязал номер
-            String message = "👋 Привет! Вы уже авторизованы в системе Чек24.\n\n" +
-                    "Ваш номер телефона: *" + user.getPhoneNumber() + "*\n\n" +
-                    "Коды авторизации приходят в этот чат.\n\n" +
-                    "Команды:\n" +
-                    "/help - справка\n" +
-                    "/start - начать заново";
-            sendMessage(chatId, message);
-        } else {
-            // Новый пользователь или не ввёл номер
-            String message = "👋 Привет! Я бот для авторизации в системе Чек24.\n\n" +
-                    "🔐 Для получения кодов авторизации необходимо привязать номер телефона.\n\n" +
-                    "📱 *Пожалуйста, отправьте ваш номер телефона в формате:*\n" +
-                    "_+79051234567_\n\n" +
-                    "(начинается с плюса, без пробелов и скобок)";
-            sendMessage(chatId, message);
-        }
-    }
-
-    /**
-     * Отправка справки на /help
-     */
-    private void sendHelpMessage(Long chatId) {
-        TelegramUser user = telegramUserRepository.findByChatId(chatId).orElse(null);
-        
-        String message;
-        if (user == null || user.getPhoneNumber() == null) {
-            message = "ℹ️ *Справка*\n\n" +
-                    "Я бот для авторизации в системе Чек24.\n" +
-                    "Когда вы запрашиваете код авторизации на сайте, " +
-                    "он автоматически приходит в этот чат.\n\n" +
-                    "⚠️ *Вы ещё не привязали номер телефона!*\n\n" +
-                    "📱 Отправьте ваш номер телефона в формате:\n" +
-                    "_+79051234567_\n\n" +
-                    "*Команды:*\n" +
-                    "/start - начать привязку номера";
-        } else {
-            message = "ℹ️ *Справка*\n\n" +
-                    "Я бот для авторизации в системе Чек24.\n" +
-                    "Когда вы запрашиваете код авторизации на сайте, " +
-                    "он автоматически приходит в этот чат.\n\n" +
-                    "✅ Ваш номер телефона: *" + user.getPhoneNumber() + "*\n\n" +
-                    "*Команды:*\n" +
-                    "/start - начать заново";
-        }
-
-        sendMessage(chatId, message);
-    }
-
-    /**
-     * Отправка сообщения о неизвестной команде
-     */
-    private void sendUnknownCommandMessage(Long chatId) {
-        sendMessage(chatId, "❌ Неизвестная команда. Используйте /help для просмотра доступных команд.");
-    }
-
-    /**
-     * Отправить код подтверждения пользователю по chat_id
-     */
-    public void sendVerificationCode(Long chatId, String code) {
-        String message = "🔐 Ваш код подтверждения: *" + code + "*\n\n" +
-                "_Не сообщайте код никому_";
-        sendMessage(chatId, message);
+        log.info("✅ Номер {} привязан к chat_id: {}", cleanPhone, chatId);
     }
 
     /**
      * Отправить код подтверждения пользователю по номеру телефона
      */
     @Transactional(readOnly = true)
-    public void sendVerificationCodeByPhone(String phoneNumber) {
-        telegramUserRepository.findByPhoneNumber(phoneNumber)
+    public void sendCodeToUser(String phone, String code) {
+        telegramUserRepository.findByPhoneNumber(phone)
                 .ifPresentOrElse(
                         user -> {
-                            // Код будет отправлен из AuthService
-                            log.info("Найден пользователь для номера {}: chat_id={}", phoneNumber, user.getChatId());
+                            sendMessage(user.getChatId(), 
+                                "🔐 Ваш код подтверждения: *" + code + "*\n\n" +
+                                "_Не сообщайте код никому_");
+                            log.info("✉️ Код отправлен в Telegram для {}: chat_id={}", phone, user.getChatId());
                         },
-                        () -> log.warn("Пользователь с номером {} не найден в Telegram", phoneNumber)
+                        () -> log.warn("⚠️ Пользователь с номером {} не найден в Telegram", phone)
                 );
-    }
-
-    /**
-     * Получить chat_id по номеру телефона
-     */
-    @Transactional(readOnly = true)
-    public Optional<Long> getChatIdByPhoneNumber(String phoneNumber) {
-        return telegramUserRepository.findByPhoneNumber(phoneNumber)
-                .map(TelegramUser::getChatId);
     }
 
     /**
      * Отправить сообщение пользователю
      */
     public void sendMessage(Long chatId, String text) {
-        if (botToken == null || botToken.isBlank()) {
-            log.warn("Токен Telegram бота не настроен");
-            return;
-        }
-
         try {
             String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
-
-            Map<String, Object> requestBody = Map.of(
+            
+            Map<String, Object> body = Map.of(
                     "chat_id", chatId,
                     "text", text,
                     "parse_mode", "Markdown"
             );
 
-            webClient.post()
-                    .uri(url)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .subscribe(
-                            response -> {
-                                try {
-                                    JsonNode jsonNode = objectMapper.readTree(response);
-                                    if (jsonNode.has("ok") && jsonNode.get("ok").asBoolean()) {
-                                        log.debug("Сообщение успешно отправлено в Telegram (chat_id: {})", chatId);
-                                    } else {
-                                        log.error("Ошибка отправки в Telegram: {}", response);
-                                    }
-                                } catch (Exception e) {
-                                    log.error("Ошибка парсинга ответа Telegram", e);
-                                }
-                            },
-                            error -> log.error("Ошибка отправки сообщения в Telegram", error)
-                    );
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                    .header("Content-Type", "application/json")
+                    .build();
 
+            // Асинхронная отправка
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        try {
+                            JsonNode resp = objectMapper.readTree(response.body());
+                            if (!resp.has("ok") || !resp.get("ok").asBoolean()) {
+                                log.error("❌ Ошибка отправки в Telegram: {}", response.body());
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ Ошибка парсинга ответа: {}", e.getMessage());
+                        }
+                        return response;
+                    });
         } catch (Exception e) {
-            log.error("Ошибка отправки сообщения в Telegram для chat_id: {}", chatId, e);
+            log.error("❌ Ошибка отправки сообщения: {}", e.getMessage());
         }
     }
 
     /**
-     * Отправить сообщение всем активным пользователям
+     * Получить chat_id по номеру телефона
      */
     @Transactional(readOnly = true)
-    public void broadcastMessage(String text) {
-        List<TelegramUser> activeUsers = telegramUserRepository.findByIsActiveTrue();
-        log.info("Рассылка сообщения {} пользователям", activeUsers.size());
-
-        for (TelegramUser user : activeUsers) {
-            sendMessage(user.getChatId(), text);
-        }
-    }
-
-    /**
-     * Установить webhook для получения обновлений
-     */
-    public Mono<String> setWebhook(String webhookUrl) {
-        String url = "https://api.telegram.org/bot" + botToken + "/setWebhook";
-
-        Map<String, Object> requestBody = Map.of(
-                "url", webhookUrl
-        );
-
-        return webClient.post()
-                .uri(url)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(String.class);
-    }
-
-    /**
-     * Получить информацию о webhook
-     */
-    public Mono<String> getWebhookInfo() {
-        String url = "https://api.telegram.org/bot" + botToken + "/getWebhookInfo";
-
-        return webClient.get()
-                .uri(url)
-                .retrieve()
-                .bodyToMono(String.class);
+    public Long getChatIdByPhone(String phone) {
+        return telegramUserRepository.findByPhoneNumber(phone)
+                .map(TelegramUser::getChatId)
+                .orElse(null);
     }
 }

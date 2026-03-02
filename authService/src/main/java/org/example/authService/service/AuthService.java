@@ -40,9 +40,6 @@ public class AuthService {
     @Value("${jwt.access-token.expiration:#{60*60*1000}}")
     private long accessTokenExpiration;
 
-    @Value("${telegram.chat.id:}")
-    private String defaultChatId;
-
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
     private static final String CODE_PREFIX_PHONE = "code:phone:";
     private static final String CODE_PREFIX_EMAIL = "code:email:";
@@ -97,7 +94,7 @@ public class AuthService {
         redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRATION);
         log.info("💾 Код сохранен в Redis с ключом: {}", redisKey);
 
-        // Отправляем код через Telegram Bot
+        // Отправляем код через Telegram
         sendCodeViaTelegram(cleanIdentifier, code);
     }
 
@@ -105,42 +102,12 @@ public class AuthService {
      * Отправка кода через Telegram Bot
      */
     private void sendCodeViaTelegram(String identifier, String code) {
-        // Пытаемся найти пользователя по номеру телефона в Telegram
-        String phoneForLookup = identifier.contains("@") ? null : identifier;
-        
-        if (phoneForLookup != null) {
-            // Ищем по номеру телефона
-            telegramBotService.getChatIdByPhoneNumber(phoneForLookup)
-                    .ifPresentOrElse(
-                            chatId -> {
-                                telegramBotService.sendVerificationCode(chatId, code);
-                                log.info("✉️ Код отправлен в Telegram (chat_id: {}, phone: {})", chatId, phoneForLookup);
-                            },
-                            () -> {
-                                // Пользователь не найден в Telegram - отправляем на default chat_id если есть
-                                sendCodeToDefaultChat(code, identifier);
-                            }
-                    );
+        // Для телефона - ищем пользователя в Telegram и отправляем код
+        if (!identifier.contains("@")) {
+            telegramBotService.sendCodeToUser(identifier, code);
         } else {
-            // Email - отправляем на default chat_id
-            sendCodeToDefaultChat(code, identifier);
-        }
-    }
-
-    /**
-     * Отправка кода на default chat_id (если пользователь не найден в Telegram)
-     */
-    private void sendCodeToDefaultChat(String code, String identifier) {
-        if (defaultChatId != null && !defaultChatId.isBlank()) {
-            try {
-                Long chatId = Long.parseLong(defaultChatId);
-                telegramBotService.sendVerificationCode(chatId, code);
-                log.info("✉️ Код отправлен в Telegram (default chat_id: {}, identifier: {})", defaultChatId, identifier);
-            } catch (NumberFormatException e) {
-                log.warn("Некорректный Telegram chat_id: {}", defaultChatId);
-            }
-        } else {
-            log.warn("Telegram chat_id не настроен, код не будет отправлен");
+            // Для email - логика может быть другой (пока просто лог)
+            log.info("📧 Код для email: {}", identifier);
         }
     }
 

@@ -1,9 +1,11 @@
 server:
-  port: 8082
+  port: ${AUTH_SERVICE_PORT:18273}
   address: 0.0.0.0
+
 smartcaptcha:
-  server-key: ${SMARTCAPTCHA_SERVER_KEY:ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f}
+  server-key: ${SMARTCAPTCHA_SERVER_KEY:}
   validate-url: https://smartcaptcha.yandexcloud.net/validate
+
 spring:
   webflux:
     timeout:
@@ -12,13 +14,13 @@ spring:
       connect: 3s
   redis:
     host: localhost
-    port: 6379
-    password: c4Ivgh
+    port: ${REDIS_PORT:16380}
+    password: ${REDIS_PASSWORD}
     timeout: 2000
   datasource:
-    url: jdbc:postgresql://localhost:5432/check_rf
-    username: check_user
-    password: YszGyMEZmV
+    url: jdbc:postgresql://localhost:${DB_PORT:15433}/${DB_NAME:check_rf}
+    username: ${DB_USER:check_user}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -28,22 +30,27 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+
 cors:
   allowed-origins:
-    - "http://172.16.0.1:3000"
-    - "http://95.213.143.142"
+    - "http://localhost:3000"
+    - "http://localhost:8082"
+    - "http://localhost:8083"
+    - "http://localhost:8085"
     - "https://чек24.рф"
     - "https://www.чек24.рф"
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
     - "https://api.чек24.рф"
     - "https://api.xn--24-mlcu7d.xn--p1ai"
+
 jwt:
-  secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
+  secret: ${JWT_SECRET}
   access-token:
-    expiration: 10800000  # 1 час
+    expiration: 10800000  # 3 часа
   refresh-token:
     expiration: 604800000  # 7 дней
+
 security:
   captcha:
     enabled: true
@@ -51,3 +58,33 @@ security:
       - /api/auth/login
       - /api/auth/register
       - /api/contact/submit
+
+# Логирование для аудита безопасности
+logging:
+  level:
+    AUDIT: INFO
+    org.example.authService: DEBUG
+  file:
+    name: /var/www/chech24rfapi/logs/auth-service.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Prometheus metrics и Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:auth-service}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

@@ -33,3 +33,32 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Windows
+Thumbs.db
+
+# Documentation (*.md файлы кроме README)
+*.md
+!README.md
+
+# Scripts (*.sh файлы кроме server_setup.sh)
+*.sh
+!server_setup.sh
+
+# Nginx конфигурация
+nginx/
+
+# Claude
+.claude/

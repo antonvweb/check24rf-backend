@@ -25,6 +25,8 @@
         <jjwt.version>0.11.5</jjwt.version>
         <postgresql.version>42.7.7</postgresql.version>
         <lombok.version>1.18.32</lombok.version>
+        <micrometer.version>1.13.0</micrometer.version>
+        <bucket4j.version>8.9.0</bucket4j.version>
     </properties>
 
     <dependencies>
@@ -119,6 +121,25 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
+        </dependency>
+
+        <!-- Actuator для мониторинга -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Prometheus для метрик -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Bucket4j для rate limiting -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>${bucket4j.version}</version>
         </dependency>
     </dependencies>
     <build>

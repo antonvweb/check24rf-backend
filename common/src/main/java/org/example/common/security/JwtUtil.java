@@ -8,6 +8,7 @@ import org.example.common.entity.TokenInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -25,6 +26,7 @@ public class JwtUtil {
     private static final String CLAIM_USER_ID = "id";
     private static final String CLAIM_TOKEN_TYPE = "type";
     private static final int MIN_SECRET_LENGTH = 32; // 256 bits
+    private static final String BLACKLIST_PREFIX = "blacklist:token:";
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -36,6 +38,8 @@ public class JwtUtil {
     private long refreshTokenExpiration;
 
     private SecretKey signingKey;
+    
+    private RedisTemplate<String, String> redisTemplate;
 
     @PostConstruct
     private void init() {
@@ -150,7 +154,16 @@ public class JwtUtil {
         return isTokenValid(token, null);
     }
 
-    private boolean isTokenValid(String token, String expectedType) {
+    /**
+     * Проверяет валидность токена с учетом blacklist
+     */
+    public boolean isTokenValid(String token, String expectedType) {
+        // Проверяем blacklist
+        if (isTokenBlacklisted(token)) {
+            logger.debug("Token is blacklisted: {}", token);
+            return false;
+        }
+
         try {
             Claims claims = getClaims(token);
 
@@ -223,6 +236,41 @@ public class JwtUtil {
                         .expiresAt(claims.getExpiration())
                         .build());
     }
+
+    /**
+     * Добавляет токен в blacklist
+     * @param token Токен для блокировки
+     * @param expirationMillis Время жизни blacklist записи в миллисекундах
+     */
+    public void blacklistToken(String token, long expirationMillis) {
+        if (redisTemplate == null) {
+            logger.warn("RedisTemplate not available, cannot blacklist token");
+            return;
+        }
+        String blacklistKey = BLACKLIST_PREFIX + token;
+        redisTemplate.opsForValue().set(blacklistKey, "1", Duration.ofMillis(expirationMillis));
+        logger.debug("Token blacklisted: {}", token);
+    }
+
+    /**
+     * Проверяет, находится ли токен в blacklist
+     * @param token Токен для проверки
+     * @return true если токен в blacklist
+     */
+    public boolean isTokenBlacklisted(String token) {
+        if (redisTemplate == null) {
+            logger.warn("RedisTemplate not available, cannot check blacklist");
+            return false;
+        }
+        String blacklistKey = BLACKLIST_PREFIX + token;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey));
+    }
+
+    /**
+     * Устанавливает RedisTemplate для работы с blacklist
+     */
+    @Autowired
+    public void setRedisTemplate(RedisTemplate<String, String> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 }
-
-

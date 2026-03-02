@@ -1,0 +1,8 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+**.git**
+**.idea**
+**.vscode**
+**.DS_Store**
+**.env**
+**.env.local**

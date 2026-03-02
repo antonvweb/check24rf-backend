@@ -1,5 +1,7 @@
 package org.example.authService.service;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.example.common.entity.User;
@@ -14,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 @Slf4j
@@ -26,25 +30,36 @@ public class AuthService {
     private final SmsService smsService;
     private final EmailService emailService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ValidationUtils validationUtils;
 
     @Value("${jwt.refresh-token.expiration:#{7*24*60*60*1000}}")
     private long REFRESH_EXPIRY;
 
+    @Value("${jwt.access-token.expiration:#{60*60*1000}}")
+    private long accessTokenExpiration;
+
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
     private static final String CODE_PREFIX_PHONE = "code:phone:";
     private static final String CODE_PREFIX_EMAIL = "code:email:";
+    private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
+    private static final String BLACKLIST_PREFIX = "blacklist:token:";
+
+    private static final int MAX_ATTEMPTS = 5;
+    private static final String ATTEMPTS_PREFIX = "attempts:";
 
     public AuthService(
             UserRepository userRepository,
             JwtUtil jwtUtil,
             SmsService smsService,
             EmailService emailService,
-            @Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate) {
+            @Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate,
+            ValidationUtils validationUtils) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.smsService = smsService;
         this.emailService = emailService;
         this.redisTemplate = redisTemplate;
+        this.validationUtils = validationUtils;
     }
 
     /**
@@ -53,19 +68,23 @@ public class AuthService {
     public void sendVerificationCode(String identifier) {
         log.info("📧 Отправка кода верификации на: {}", identifier);
 
-        if (identifier == null || identifier.isBlank()) {
-            throw new IllegalArgumentException("Идентификатор не может быть пустым");
+        // Валидация идентификатора
+        if (!validationUtils.isValidIdentifier(identifier)) {
+            log.warn("❌ Неверный формат идентификатора: {}", identifier);
+            throw new IllegalArgumentException("Неверный формат идентификатора. Используйте телефон (+7...) или email.");
         }
 
-        // TODO: Вернуть случайную генерацию после демонстрации МЧО
-        // String code = String.format("%06d", new Random().nextInt(1_000_000));
-        String code = "123456";
+        // Нормализация идентификатора (особенно для телефонов)
+        String cleanIdentifier = validationUtils.normalizePhone(identifier);
+        log.info("✅ Нормализованный идентификатор: {}", cleanIdentifier);
+
+        String code = String.format("%06d", new Random().nextInt(1_000_000));
 
         // Определяем тип: телефон или email
-        boolean isEmail = identifier.contains("@");
+        boolean isEmail = cleanIdentifier.contains("@");
         String redisKey = isEmail
-                ? CODE_PREFIX_EMAIL + identifier
-                : CODE_PREFIX_PHONE + identifier;
+                ? CODE_PREFIX_EMAIL + cleanIdentifier
+                : CODE_PREFIX_PHONE + cleanIdentifier;
 
         // Сохраняем код в Redis на 5 минут
         redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRATION);
@@ -93,16 +112,18 @@ public class AuthService {
 
         log.info("🔍 Проверка кода для: {}", identifier);
 
-        if (identifier == null || identifier.isBlank()) {
-            throw new IllegalArgumentException("Идентификатор не может быть пустым");
+        // Валидация идентификатора
+        if (!validationUtils.isValidIdentifier(identifier)) {
+            log.warn("❌ Неверный формат идентификатора: {}", identifier);
+            throw new IllegalArgumentException("Неверный формат идентификатора. Используйте телефон (+7...) или email.");
         }
 
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("Код не может быть пустым");
         }
 
-        // Очистка данных
-        String cleanIdentifier = identifier.trim();
+        // Очистка и нормализация данных
+        String cleanIdentifier = validationUtils.normalizePhone(identifier.trim());
         String cleanCode = code.trim();
 
         // Определяем тип и получаем код из Redis
@@ -110,6 +131,17 @@ public class AuthService {
         String redisKey = isEmail
                 ? CODE_PREFIX_EMAIL + cleanIdentifier
                 : CODE_PREFIX_PHONE + cleanIdentifier;
+
+        // Проверка лимита попыток
+        String attemptsKey = ATTEMPTS_PREFIX + cleanIdentifier;
+        Integer attempts = Optional.ofNullable(redisTemplate.opsForValue().get(attemptsKey))
+                .map(Integer::parseInt)
+                .orElse(0);
+        
+        if (attempts >= MAX_ATTEMPTS) {
+            log.warn("❌ Превышен лимит попыток для: {}", cleanIdentifier);
+            throw new IllegalArgumentException("Слишком много попыток. Запросите новый код.");
+        }
 
         String storedCode = redisTemplate.opsForValue().get(redisKey);
 
@@ -120,9 +152,15 @@ public class AuthService {
 
         // Проверяем код
         if (!cleanCode.equals(storedCode.trim())) {
-            log.warn("❌ Неверный код для: {}", cleanIdentifier);
+            // Увеличить счетчик попыток
+            redisTemplate.opsForValue().increment(attemptsKey);
+            redisTemplate.expire(attemptsKey, Duration.ofMinutes(15));
+            log.warn("❌ Неверный код для: {} (попытка {}/{})", cleanIdentifier, attempts + 1, MAX_ATTEMPTS);
             throw new IllegalArgumentException("Неверный код подтверждения");
         }
+        
+        // Успех - удалить счетчик попыток
+        redisTemplate.delete(attemptsKey);
 
         log.info("✅ Код верен для: {}", cleanIdentifier);
 
@@ -149,15 +187,28 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getId().toString());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId().toString());
 
-        // Устанавливаем refresh token в httpOnly cookie
+        // Сохраняем refresh token в Redis для ротации
+        String redisKeyRefresh = REFRESH_TOKEN_PREFIX + user.getId().toString();
+        redisTemplate.opsForValue().set(redisKeyRefresh, refreshToken, Duration.ofMillis(REFRESH_EXPIRY));
+
+        // Устанавливаем cookies
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("Strict")
+                .maxAge(accessTokenExpiration / 1000)
+                .build();
+
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true) // HTTPS only в production
+                .secure(true)
                 .path("/")
-                .sameSite("Lax")
+                .sameSite("Strict")
                 .maxAge(REFRESH_EXPIRY / 1000)
                 .build();
 
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         log.info("🎫 JWT токены созданы для пользователя: {}", user.getId());
@@ -187,13 +238,18 @@ public class AuthService {
     }
 
     /**
-     * Обновление access токена через refresh token
+     * Обновление access токена через refresh token с ротацией
      */
     public String refreshAccessToken(String refreshToken) {
         log.info("🔄 Обновление access токена");
 
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("Refresh token не предоставлен");
+        }
+
+        // Проверяем blacklist
+        if (jwtUtil.isTokenBlacklisted(refreshToken)) {
+            throw new IllegalArgumentException("Refresh token был отозван");
         }
 
         if (jwtUtil.isExpired(refreshToken)) {
@@ -203,12 +259,27 @@ public class AuthService {
         String userId = jwtUtil.getUserId(refreshToken)
                 .orElseThrow(() -> new IllegalArgumentException("Некорректный refresh token"));
 
-        // Проверяем существование пользователя
-        if (!userRepository.existsById(java.util.UUID.fromString(userId))) {
-            throw new IllegalArgumentException("Пользователь не найден");
+        // Проверяем в Redis (ротация)
+        String redisKey = REFRESH_TOKEN_PREFIX + userId;
+        String storedRefreshToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
+            // Токен уже был использован - возможная атака
+            // Блокируем все токены пользователя
+            blacklistAllUserTokens(userId);
+            throw new IllegalArgumentException("Refresh token уже был использован. Все токены отозваны.");
         }
 
+        // Генерируем НОВЫЙ refresh token (ротация)
+        String newRefreshToken = jwtUtil.generateRefreshToken(userId);
         String newAccessToken = jwtUtil.generateAccessToken(userId);
+
+        // Обновляем в Redis
+        redisTemplate.opsForValue().set(redisKey, newRefreshToken, Duration.ofMillis(REFRESH_EXPIRY));
+
+        // Добавляем старый токен в blacklist
+        jwtUtil.blacklistToken(refreshToken, REFRESH_EXPIRY);
+
         log.info("✅ Access токен обновлен для пользователя: {}", userId);
 
         return newAccessToken;
@@ -217,16 +288,82 @@ public class AuthService {
     /**
      * Выход из системы (инвалидация токенов)
      */
-    public void logout(HttpServletResponse response) {
-        // Удаляем refresh token cookie
-        ResponseCookie deleteCookie = ResponseCookie.from("refreshToken", "")
+    public void logout(HttpServletResponse response, HttpServletRequest request) {
+        // Извлекаем токены из запроса
+        String accessToken = extractTokenFromRequest(request);
+        String refreshToken = extractRefreshTokenFromRequest(request);
+        
+        // Добавляем access token в blacklist
+        if (accessToken != null && !accessToken.isBlank()) {
+            jwtUtil.getTimeToExpiration(accessToken).ifPresent(expiration ->
+                jwtUtil.blacklistToken(accessToken, expiration * 1000)
+            );
+            log.info("🚫 Access token добавлен в blacklist");
+        }
+
+        // Добавляем refresh token в blacklist
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            jwtUtil.getTimeToExpiration(refreshToken).ifPresent(expiration ->
+                jwtUtil.blacklistToken(refreshToken, expiration * 1000)
+            );
+
+            // Удаляем из Redis
+            String userId = jwtUtil.getUserId(refreshToken).orElse(null);
+            if (userId != null) {
+                redisTemplate.delete(REFRESH_TOKEN_PREFIX + userId);
+                log.info("🗑️ Refresh token удален из Redis для пользователя: {}", userId);
+            }
+        }
+
+        // Удаляем cookies
+        ResponseCookie deleteAccessCookie = ResponseCookie.from("accessToken", "")
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .maxAge(0)
                 .build();
 
-        response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
+        ResponseCookie deleteRefreshCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteAccessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString());
+
         log.info("👋 Пользователь вышел из системы");
+    }
+
+    /**
+     * Блокировка всех токенов пользователя (превентивная мера при атаке)
+     */
+    private void blacklistAllUserTokens(String userId) {
+        // Блокируем все токены пользователя (превентивная мера при атаке)
+        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + userId, "1", Duration.ofDays(7));
+        log.warn("🚨 Все токены пользователя {} заблокированы из-за возможной атаки", userId);
+    }
+
+    /**
+     * Извлечение access token из запроса
+     */
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        return Arrays.stream(Optional.ofNullable(request.getCookies()).orElse(new Cookie[0]))
+                .filter(c -> "accessToken".equals(c.getName()))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
+    }
+
+    /**
+     * Извлечение refresh token из запроса
+     */
+    private String extractRefreshTokenFromRequest(HttpServletRequest request) {
+        return Arrays.stream(Optional.ofNullable(request.getCookies()).orElse(new Cookie[0]))
+                .filter(c -> "refreshToken".equals(c.getName()))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
     }
 }

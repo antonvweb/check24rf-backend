@@ -1,14 +1,77 @@
 server:
-  port: 8090
+  port: ${MCO_SERVICE_PORT:17456}
   address: 0.0.0.0
+
 spring:
   datasource:
-    url: jdbc:postgresql://217.199.252.124:5432/taskpilot_db
-    username: anton_user
-    password: anton22893
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:check_rf}
+    username: ${DB_USER:check_user}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  redis:
+    host: ${REDIS_HOST:redis}
+    port: 6379
+    password: ${REDIS_PASSWORD}
+    timeout: 2000
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+cors:
+  allowed-origins:
+    - "https://чек24.рф"
+    - "https://www.чек24.рф"
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+    - "https://api.чек24.рф"
+    - "https://api.xn--24-mlcu7d.xn--p1ai"
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token:
+    expiration: 3600000  # 1 час
+  refresh-token:
+    expiration: 604800000  # 7 дней
+
+security:
+  captcha:
+    enabled: true
+    required-endpoints:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/contact/submit
+
+# Конфигурация для интеграции с МЧО (Мои Чеки Онлайн)
+mco:
+  api:
+    # ⚠️ ВАЖНО: Для промышленного контура (КПЭ)
+    base-url: https://openapi.nalog.ru:8090/open-api/ais3/DrPartnersIntegrationService/0.1
+
+    # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
+    token: ${MCO_API_TOKEN}
+    user-token: ${MCO_API_TOKEN}
+
+    # Таймаут для SOAP запросов (в миллисекундах)
+    timeout: 60000
+
+  partner:
+    # ИНН организации-партнера (из заявки в ФНС)
+    inn: "5610238469"
+
+    # Название партнера для отображения в ЛК МЧО
+    name: "ЧЕК24.РФ"
+
+    # Тип партнера (всегда PARTNER для платформ-партнеров)
+    type: "PARTNER"
+
+# Логирование для production
+logging:
+  level:
+    org.example.mcoService: INFO
+    org.apache.http: WARN
+    org.springframework.ws: WARN

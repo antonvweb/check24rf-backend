@@ -1,9 +1,9 @@
 server:
-  port: 8085
+  port: ${MCO_SERVICE_PORT:17456}
   address: 0.0.0.0
 
 smartcaptcha:
-  server-key: ${SMARTCAPTCHA_SERVER_KEY:ysc2_6nxDStUJiSixckBItXAoaEyzX5yz1N4znswuReMN21f4e65f}
+  server-key: ${SMARTCAPTCHA_SERVER_KEY:}
   validate-url: https://smartcaptcha.yandexcloud.net/validate
 
 spring:
@@ -13,14 +13,14 @@ spring:
       write: 5s
       connect: 3s
   datasource:
-    url: jdbc:postgresql://localhost:5432/check_rf
-    username: check_user
-    password: YszGyMEZmV
+    url: jdbc:postgresql://localhost:${DB_PORT:15433}/${DB_NAME:check_rf}
+    username: ${DB_USER:check_user}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   redis:
     host: localhost
-    port: 6379
-    password: c4Ivgh
+    port: ${REDIS_PORT:16380}
+    password: ${REDIS_PASSWORD}
     timeout: 2000
   jpa:
     hibernate:
@@ -33,8 +33,10 @@ spring:
 
 cors:
   allowed-origins:
-    - "http://172.16.0.1:3000"
-    - "http://95.213.143.142"
+    - "http://localhost:3000"
+    - "http://localhost:8082"
+    - "http://localhost:8083"
+    - "http://localhost:8085"
     - "https://чек24.рф"
     - "https://www.чек24.рф"
     - "https://xn--24-mlcu7d.xn--p1ai"
@@ -43,7 +45,7 @@ cors:
     - "https://api.xn--24-mlcu7d.xn--p1ai"
 
 jwt:
-  secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
+  secret: ${JWT_SECRET}
   access-token:
     expiration: 3600000  # 1 час
   refresh-token:
@@ -68,8 +70,8 @@ mco:
 
     # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
     # Заменить на реальный токен из письма от ФНС
-    token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
-    user-token: ${MCO_API_TOKEN:chek24_eTkloRYx8}
+    token: ${MCO_API_TOKEN}
+    user-token: ${MCO_API_TOKEN}
 
     # Таймаут для SOAP запросов (в миллисекундах)
     timeout: 60000  # Увеличено до 60 секунд для медленных запросов
@@ -103,3 +105,40 @@ logging:
 
     # JAXB marshalling
     org.springframework.oxm: DEBUG
+
+# Логирование для аудита безопасности
+logging:
+  level:
+    AUDIT: INFO
+    org.example.mcoService: DEBUG
+    org.apache.http: DEBUG
+    org.apache.http.wire: DEBUG
+    org.springframework.ws: DEBUG
+    org.springframework.ws.client: DEBUG
+    org.springframework.ws.client.MessageTracing.sent: DEBUG
+    org.springframework.ws.client.MessageTracing.received: DEBUG
+    org.springframework.ws.server.MessageTracing: DEBUG
+  file:
+    name: /var/www/chech24rfapi/logs/mco-service.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Prometheus metrics и Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:mco-service}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

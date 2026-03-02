@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,6 +32,15 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
         this.corsProperties = corsProperties;
     }
+    
+    // Публичные эндпоинты без аутентификации
+    private static final List<String> PUBLIC_ENDPOINTS = List.of(
+            "/api/auth/send-code",
+            "/api/auth/verify",
+            "/api/auth/verify-captcha",
+            "/api/auth/refresh",
+            "/api/auth/csrf-token"
+    );
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -38,11 +48,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/actuator/**")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/send-code", "/api/auth/verify", "/api/auth/verify-captcha", "/api/auth/refresh", "/api/auth/csrf-token").permitAll()
+                        .requestMatchers(PUBLIC_ENDPOINTS.toArray(new String[0])).permitAll()
                         .requestMatchers("/api/auth/validate", "/api/auth/logout").authenticated()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()

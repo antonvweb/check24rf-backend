@@ -15,6 +15,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+cors:
+  allowed-origins:
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+
 jwt:
   secret: ${JWT_SECRET}
   access-token:

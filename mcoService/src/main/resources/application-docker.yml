@@ -27,6 +27,11 @@ jwt:
   refresh-token:
     expiration: 604800000
 
+cors:
+  allowed-origins:
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+
 mco:
   api:
     token: ${MCO_API_TOKEN}

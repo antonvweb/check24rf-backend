@@ -20,6 +20,11 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
 
+cors:
+  allowed-origins:
+    - "https://xn--24-mlcu7d.xn--p1ai"
+    - "https://www.xn--24-mlcu7d.xn--p1ai"
+
 jwt:
   secret: ${JWT_SECRET}
   access-token:

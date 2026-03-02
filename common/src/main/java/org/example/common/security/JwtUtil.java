@@ -8,6 +8,7 @@ import org.example.common.entity.TokenInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -271,7 +272,7 @@ public class JwtUtil {
      * Устанавливает RedisTemplate для работы с blacklist
      */
     @Autowired
-    public void setRedisTemplate(RedisTemplate<String, String> redisTemplate) {
+    public void setRedisTemplate(@Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 }

@@ -40,16 +40,35 @@ public class JwtFilter extends OncePerRequestFilter {
     
     private static final String USER_CACHE_PREFIX = "user:cache:";
     private static final Duration USER_CACHE_TTL = Duration.ofMinutes(5);
+    
+    // Публичные эндпоинты, не требующие аутентификации
+    private static final List<String> PUBLIC_ENDPOINTS = List.of(
+            "/api/auth/send-code",
+            "/api/auth/verify",
+            "/api/auth/verify-captcha",
+            "/api/auth/refresh",
+            "/api/auth/csrf-token"
+    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
 
-        // Пропустить health checks
         String uri = req.getRequestURI();
+        
+        // Пропустить health checks и публичные эндпоинты
         if (uri.startsWith("/actuator/") || uri.equals("/health")) {
             chain.doFilter(req, res);
             return;
+        }
+        
+        // Пропустить публичные эндпоинты авторизации
+        for (String publicEndpoint : PUBLIC_ENDPOINTS) {
+            if (uri.startsWith(publicEndpoint)) {
+                log.debug("Skipping authentication for public endpoint: {}", uri);
+                chain.doFilter(req, res);
+                return;
+            }
         }
 
         // Извлечь токен из cookie

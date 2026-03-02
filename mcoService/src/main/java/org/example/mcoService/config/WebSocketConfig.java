@@ -18,14 +18,19 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Единый WebSocket для всех уведомлений
-        registry.addHandler(webSocketHandler, "/ws/notifications")
-                .setAllowedOrigins("*");
-        
-        // Дополнительный endpoint для совместимости
+        // Путь должен совпадать с тем, что приходит от nginx
+        // nginx проксирует /api/mco/ → http://127.0.0.1:17456
+        // Значит запрос /api/mco/ws придёт на mcoService как /api/mco/ws
+        registry.addHandler(webSocketHandler, "/api/mco/ws")
+                .setAllowedOrigins(
+                    "https://xn--24-mlcu7d.xn--p1ai",
+                    "https://www.xn--24-mlcu7d.xn--p1ai"
+                );
+
+        // Дополнительный endpoint для локальной разработки (без nginx)
         registry.addHandler(webSocketHandler, "/ws")
                 .setAllowedOrigins("*");
 
-        log.info("WebSocket обработчик зарегистрирован на /ws/notifications и /ws");
+        log.info("WebSocket handlers registered on /api/mco/ws and /ws");
     }
 }

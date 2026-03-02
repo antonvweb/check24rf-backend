@@ -21,10 +21,13 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.security.SecureRandom;
 
 @Slf4j
 @Service
 public class AuthService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -82,7 +85,7 @@ public class AuthService {
         String cleanIdentifier = validationUtils.normalizePhone(identifier);
         log.info("✅ Нормализованный идентификатор: {}", cleanIdentifier);
 
-        String code = String.format("%06d", new Random().nextInt(1_000_000));
+        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
 
         // Определяем тип: телефон или email
         boolean isEmail = cleanIdentifier.contains("@");

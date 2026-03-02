@@ -30,9 +30,9 @@ cors:
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
 jwt:
-  secret: ${JWT_SECRET:your_super_secret_key_must_be_at_least_32_characters_long_for_security}
+  secret: ${JWT_SECRET}
   access-token:
-    expiration: 10800000  # 1 час
+    expiration: 10800000  # 3 часа (10800000 мс)
   refresh-token:
     expiration: 604800000  # 7 дней
 security:

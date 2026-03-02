@@ -130,9 +130,18 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
 
     private void handlePhoneInput(Long chatId, TelegramUser user, String phone) {
         String cleanPhone = phone.trim();
-        
+
         if (!cleanPhone.startsWith("+")) {
             sendMessage(chatId, "❌ Номер должен начинаться с +\n\n" +
+                    "Пример: _+79051234567_\n\n" +
+                    "Введите ещё раз:");
+            return;
+        }
+
+        // Проверяем что номер содержит только цифры после + (от 10 до 15 цифр)
+        if (!cleanPhone.matches("\\+\\d{10,15}")) {
+            sendMessage(chatId, "❌ Неверный формат номера.\n\n" +
+                    "Номер должен содержать от 10 до 15 цифр после +\n" +
                     "Пример: _+79051234567_\n\n" +
                     "Введите ещё раз:");
             return;
@@ -148,11 +157,11 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
 
         user.setPhoneNumber(cleanPhone);
         telegramUserRepository.save(user);
-        
+
         sendMessage(chatId, "✅ Номер *" + cleanPhone + "* привязан!\n\n" +
                 "Теперь коды авторизации будут приходить в этот чат.\n\n" +
                 "/help - справка");
-        
+
         log.info("✅ Номер {} привязан к chat_id: {}", cleanPhone, chatId);
     }
 

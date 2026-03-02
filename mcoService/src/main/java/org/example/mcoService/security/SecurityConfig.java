@@ -28,8 +28,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.disable())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/mco/**").authenticated()
+                        .requestMatchers("/api/mco/ws").permitAll()
+                        .requestMatchers("/ws").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/api/mco/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

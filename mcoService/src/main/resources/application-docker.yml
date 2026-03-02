@@ -32,9 +32,27 @@ cors:
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
 
+# Конфигурация для интеграции с МЧО (Мои Чеки Онлайн)
 mco:
   api:
+    # URL для интеграции с МЧО
+    base-url: https://openapi.nalog.ru:8090/open-api/ais3/DrPartnersIntegrationService/0.1
+
+    # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
     token: ${MCO_API_TOKEN}
+
+    # Таймаут для SOAP запросов (в миллисекундах)
+    timeout: 60000
+
+  partner:
+    # ИНН организации-партнера (из заявки в ФНС)
+    inn: "5610238469"
+
+    # Название партнера для отображения в ЛК МЧО
+    name: "ЧЕК24.РФ"
+
+    # Тип партнера (всегда PARTNER для платформ-партнеров)
+    type: "PARTNER"
 
 logging:
   level:

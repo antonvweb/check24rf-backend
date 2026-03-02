@@ -85,40 +85,23 @@ jobs:
         port: ${{ secrets.PROD_SSH_PORT }}
         script: |
           cd /var/www/check24rf-backend
-
-          # Создаём .env файл из GitHub Secrets
-          cat > .env << 'ENVEOF'
-          # Check24RF API Environment
-          # Created by GitHub Actions - $(date -Iseconds)
-
-          # Database
-          DB_HOST=localhost
-          DB_PORT=${{ secrets.PROD_DB_PORT }}
+          cat > .env << ENVEOF
+          DB_HOST=postgres
+          DB_PORT=5432
           DB_NAME=${{ secrets.PROD_DB_NAME }}
           DB_USER=${{ secrets.PROD_DB_USER }}
           DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
-
-          # Redis
-          REDIS_HOST=localhost
-          REDIS_PORT=${{ secrets.PROD_REDIS_PORT }}
+          REDIS_HOST=redis
+          REDIS_PORT=6379
           REDIS_PASSWORD=${{ secrets.PROD_REDIS_PASSWORD }}
-
-          # JWT
           JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
-
-          # Service Ports
           AUTH_SERVICE_PORT=${{ secrets.PROD_AUTH_SERVICE_PORT }}
           USER_SERVICE_PORT=${{ secrets.PROD_USER_SERVICE_PORT }}
           MCO_SERVICE_PORT=${{ secrets.PROD_MCO_SERVICE_PORT }}
           ADMIN_SERVICE_PORT=${{ secrets.PROD_ADMIN_SERVICE_PORT }}
-
-          # MCO API Token
           MCO_API_TOKEN=${{ secrets.PROD_MCO_API_TOKEN }}
-
-          # SmartCaptcha
           SMARTCAPTCHA_SERVER_KEY=${{ secrets.PROD_SMARTCAPTCHA_SERVER_KEY }}
           ENVEOF
-
           chmod 600 .env
           chown ${{ secrets.PROD_SERVER_USER }}:${{ secrets.PROD_SERVER_USER }} .env
           echo "✓ .env file created"

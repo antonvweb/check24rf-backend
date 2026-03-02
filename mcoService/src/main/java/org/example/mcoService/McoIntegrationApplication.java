@@ -3,14 +3,13 @@ package org.example.mcoService;
 import org.example.mcoService.config.McoProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication(exclude = RedisAutoConfiguration.class, scanBasePackages = {
+@SpringBootApplication(scanBasePackages = {
         "org.example.common",
         "org.example.mcoService"
 })

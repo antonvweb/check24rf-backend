@@ -66,6 +66,7 @@ services:
         condition: service_healthy
     networks:
       - check24_internal
+      - check24_external
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:18273/actuator/health"]
       interval: 10s
@@ -75,7 +76,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
     tmpfs:
       - /tmp
 
@@ -104,6 +104,7 @@ services:
         condition: service_healthy
     networks:
       - check24_internal
+      - check24_external
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:19384/actuator/health"]
       interval: 10s
@@ -113,7 +114,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
     tmpfs:
       - /tmp
 
@@ -143,6 +143,7 @@ services:
         condition: service_healthy
     networks:
       - check24_internal
+      - check24_external
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:17456/actuator/health"]
       interval: 10s
@@ -152,7 +153,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
     tmpfs:
       - /tmp
 
@@ -163,6 +163,8 @@ networks:
     ipam:
       config:
         - subnet: 172.28.0.0/16
+  check24_external:
+    driver: bridge
 
 volumes:
   postgres_data:

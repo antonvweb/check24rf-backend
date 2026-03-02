@@ -84,7 +84,7 @@ jobs:
         key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
         port: ${{ secrets.PROD_SSH_PORT }}
         script: |
-          cd /var/www/chech24rfapi
+          cd /var/www/check24rf-backend
 
           # Создаём .env файл из GitHub Secrets
           cat > .env << 'ENVEOF'
@@ -131,7 +131,7 @@ jobs:
         key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
         port: ${{ secrets.PROD_SSH_PORT }}
         script: |
-          cd /var/www/chech24rfapi
+          cd /var/www/check24rf-backend
 
           # Pull latest changes
           git pull origin ${{ github.ref_name }}

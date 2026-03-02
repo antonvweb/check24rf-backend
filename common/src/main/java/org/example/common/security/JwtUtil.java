@@ -271,7 +271,7 @@ public class JwtUtil {
      * Устанавливает RedisTemplate для работы с blacklist
      */
     @Autowired
-    public void setRedisTemplate(RedisTemplate<String, String> redisTemplate) {
+    public void setRedisTemplate(@org.springframework.beans.factory.annotation.Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 }

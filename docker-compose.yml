@@ -88,6 +88,7 @@ services:
       - "127.0.0.1:${USER_SERVICE_PORT:-19384}:19384"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-check_rf}
@@ -125,6 +126,7 @@ services:
       - "127.0.0.1:${MCO_SERVICE_PORT:-17456}:17456"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-check_rf}

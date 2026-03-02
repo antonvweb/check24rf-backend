@@ -41,7 +41,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  authService:
+  auth-service:
     build:
       context: .
       dockerfile: authService/Dockerfile
@@ -79,7 +79,7 @@ services:
     tmpfs:
       - /tmp
 
-  userService:
+  user-service:
     build:
       context: .
       dockerfile: userService/Dockerfile
@@ -116,7 +116,7 @@ services:
     tmpfs:
       - /tmp
 
-  mcoService:
+  mco-service:
     build:
       context: .
       dockerfile: mcoService/Dockerfile

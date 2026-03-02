@@ -3,6 +3,7 @@ package org.example.authService.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -33,6 +34,7 @@ public class RedisConfig {
     }
 
     @Bean
+    @Primary
     public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);

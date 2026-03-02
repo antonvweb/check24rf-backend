@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  actions: read
+
 env:
   JAVA_VERSION: '17'
   MAVEN_VERSION: '3.9.6'

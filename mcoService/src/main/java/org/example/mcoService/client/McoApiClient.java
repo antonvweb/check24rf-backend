@@ -16,6 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class McoApiClient {
 
+
     @Autowired
     private McoSoapClient soapClient;
 

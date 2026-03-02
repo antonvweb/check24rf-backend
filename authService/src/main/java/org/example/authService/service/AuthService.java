@@ -30,6 +30,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final SmsService smsService;
     private final EmailService emailService;
+    private final TelegramBotService telegramBotService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ValidationUtils validationUtils;
 
@@ -38,6 +39,9 @@ public class AuthService {
 
     @Value("${jwt.access-token.expiration:#{60*60*1000}}")
     private long accessTokenExpiration;
+
+    @Value("${telegram.chat.id:}")
+    private String defaultChatId;
 
     private static final Duration CODE_EXPIRATION = Duration.ofMinutes(5);
     private static final String CODE_PREFIX_PHONE = "code:phone:";
@@ -53,12 +57,14 @@ public class AuthService {
             JwtUtil jwtUtil,
             SmsService smsService,
             EmailService emailService,
+            TelegramBotService telegramBotService,
             @Qualifier("redisTemplate") RedisTemplate<String, String> redisTemplate,
             ValidationUtils validationUtils) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.smsService = smsService;
         this.emailService = emailService;
+        this.telegramBotService = telegramBotService;
         this.redisTemplate = redisTemplate;
         this.validationUtils = validationUtils;
     }
@@ -91,14 +97,29 @@ public class AuthService {
         redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRATION);
         log.info("💾 Код сохранен в Redis с ключом: {}", redisKey);
 
-        // Отправляем код
-        if (isEmail) {
-            emailService.sendVerificationCode(identifier, code);
-            log.info("✉️ Код отправлен на email: {}", identifier);
-        } else {
-            smsService.sendSms(identifier, "Ваш код подтверждения: " + code);
-            log.info("📱 Код отправлен на телефон: {}", identifier);
+        // Отправляем код через Telegram Bot
+        sendCodeViaTelegram(code);
+    }
+
+    /**
+     * Отправка кода через Telegram Bot
+     */
+    private void sendCodeViaTelegram(String code) {
+        // Если есть default chat id - отправляем туда
+        if (defaultChatId != null && !defaultChatId.isBlank()) {
+            try {
+                Long chatId = Long.parseLong(defaultChatId);
+                telegramBotService.sendVerificationCode(chatId, code);
+                log.info("✉️ Код отправлен в Telegram (chat_id: {})", defaultChatId);
+                return;
+            } catch (NumberFormatException e) {
+                log.warn("Некорректный Telegram chat_id: {}", defaultChatId);
+            }
         }
+        
+        // Если default chat_id не настроен, отправляем всем пользователям
+        log.info("✉️ Отправка кода всем пользователям Telegram");
+        telegramBotService.broadcastMessage("🔐 Ваш код подтверждения: *" + code + "*");
     }
 
     /**

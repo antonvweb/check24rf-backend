@@ -45,6 +45,15 @@ jwt:
   refresh-token:
     expiration: 604800000  # 7 дней
 
+# Telegram бот для отправки кодов авторизации
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN:8653917011:AAGM0EczyiYlGdGITtYYkCyf9nhVSBung5E}
+  chat:
+    id: ${TELEGRAM_CHAT_ID:1242306774}  # ID чата для отправки кодов
+  webhook:
+    url: ${TELEGRAM_WEBHOOK_URL:}  # URL webhook для получения обновлений (опционально)
+
 security:
   captcha:
     enabled: true

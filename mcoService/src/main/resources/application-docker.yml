@@ -35,11 +35,12 @@ cors:
 # Конфигурация для интеграции с МЧО (Мои Чеки Онлайн)
 mco:
   api:
-    # URL для интеграции с МЧО
-    base-url: https://openapi.nalog.ru:8090/open-api/ais3/DrPartnersIntegrationService/0.1
+    # ⚠️ ВАЖНО: URL для интеграции с МЧО (dr.stm-labs.ru)
+    base-url: https://dr.stm-labs.ru:32355/ais3/smz/SmzIntegrationService
 
     # FNS-OpenApi-Token - токен доступа, полученный от ФНС России
     token: ${MCO_API_TOKEN}
+    user-token: ${MCO_API_TOKEN}
 
     # Таймаут для SOAP запросов (в миллисекундах)
     timeout: 60000

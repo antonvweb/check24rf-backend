@@ -102,13 +102,12 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
 
     private void handleStart(Long chatId, TelegramUser user) {
         if (user.getPhoneNumber() != null) {
-            sendMessage(chatId, "👋 Привет!\n\n" +
+            sendMessage(chatId, "Привет!\n\n" +
                     "Ваш номер: *" + user.getPhoneNumber() + "*\n\n" +
-                    "Коды авторизации приходят в этот чат.\n\n" +
-                    "/help - справка");
+                    "Коды авторизации приходят в этот чат.");
         } else {
-            sendMessage(chatId, "👋 Привет! Я бот для авторизации в Чек24.\n\n" +
-                    "📱 *Отправьте ваш номер телефона:*\n" +
+            sendMessage(chatId, "Привет! Я бот для авторизации в Чек24.\n\n" +
+                    "*Отправьте ваш номер телефона:*\n" +
                     "_+79051234567_\n\n" +
                     "(с плюсом, без пробелов и скобок)");
         }
@@ -116,12 +115,12 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
 
     private void handleHelp(Long chatId, TelegramUser user) {
         if (user.getPhoneNumber() == null) {
-            sendMessage(chatId, "ℹ️ *Справка*\n\n" +
+            sendMessage(chatId, "ℹ*Справка*\n\n" +
                     "Отправьте номер телефона в формате:\n" +
                     "_+79051234567_\n\n" +
                     "После этого коды авторизации будут приходить в этот чат.");
         } else {
-            sendMessage(chatId, "ℹ️ *Справка*\n\n" +
+            sendMessage(chatId, "ℹ*Справка*\n\n" +
                     "Ваш номер: *" + user.getPhoneNumber() + "*\n\n" +
                     "Когда запрашиваете код на сайте - он приходит в этот чат.\n\n" +
                     "/start - начать заново");
@@ -132,7 +131,7 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
         String cleanPhone = phone.trim();
 
         if (!cleanPhone.startsWith("+")) {
-            sendMessage(chatId, "❌ Номер должен начинаться с +\n\n" +
+            sendMessage(chatId, "Номер должен начинаться с +\n\n" +
                     "Пример: _+79051234567_\n\n" +
                     "Введите ещё раз:");
             return;
@@ -140,7 +139,7 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
 
         // Проверяем что номер содержит только цифры после + (от 10 до 15 цифр)
         if (!cleanPhone.matches("\\+\\d{10,15}")) {
-            sendMessage(chatId, "❌ Неверный формат номера.\n\n" +
+            sendMessage(chatId, "Неверный формат номера.\n\n" +
                     "Номер должен содержать от 10 до 15 цифр после +\n" +
                     "Пример: _+79051234567_\n\n" +
                     "Введите ещё раз:");
@@ -150,7 +149,7 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
         // Проверяем, не занят ли номер другим пользователем
         Optional<TelegramUser> existing = telegramUserRepository.findByPhoneNumber(cleanPhone);
         if (existing.isPresent() && !existing.get().getChatId().equals(chatId)) {
-            sendMessage(chatId, "❌ Этот номер уже привязан к другому пользователю.\n\n" +
+            sendMessage(chatId, "Этот номер уже привязан к другому пользователю.\n\n" +
                     "Введите другой номер или используйте /start:");
             return;
         }
@@ -158,7 +157,7 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
         user.setPhoneNumber(cleanPhone);
         telegramUserRepository.save(user);
 
-        sendMessage(chatId, "✅ Номер *" + cleanPhone + "* привязан!\n\n" +
+        sendMessage(chatId, "Номер *" + cleanPhone + "* привязан!\n\n" +
                 "Теперь коды авторизации будут приходить в этот чат.\n\n" +
                 "/help - справка");
 
@@ -174,8 +173,7 @@ public class TelegramBotService extends TelegramLongPollingBot implements Comman
                 .ifPresentOrElse(
                         user -> {
                             sendMessage(user.getChatId(), 
-                                "🔐 Ваш код подтверждения: *" + code + "*\n\n" +
-                                "_Не сообщайте код никому_");
+                                "Ваш код подтверждения: *" + code);
                             log.info("✉️ Код отправлен в Telegram для {}: chat_id={}", phone, user.getChatId());
                         },
                         () -> log.warn("⚠️ Пользователь с номером {} не найден в Telegram", phone)

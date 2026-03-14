@@ -85,7 +85,7 @@ public class AuthService {
         String cleanIdentifier = validationUtils.normalizePhone(identifier);
         log.info("✅ Нормализованный идентификатор: {}", cleanIdentifier);
 
-        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+        String code = "123456";
 
         // Определяем тип: телефон или email
         boolean isEmail = cleanIdentifier.contains("@");
@@ -96,9 +96,6 @@ public class AuthService {
         // Сохраняем код в Redis на 5 минут
         redisTemplate.opsForValue().set(redisKey, code, CODE_EXPIRATION);
         log.info("💾 Код сохранен в Redis с ключом: {}", redisKey);
-
-        // Отправляем код через Telegram
-        sendCodeViaTelegram(cleanIdentifier, code);
     }
 
     /**

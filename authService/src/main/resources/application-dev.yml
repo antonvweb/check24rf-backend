@@ -37,6 +37,8 @@ cors:
     - "https://www.чек24.рф"
     - "https://xn--24-mlcu7d.xn--p1ai"
     - "https://www.xn--24-mlcu7d.xn--p1ai"
+    - "http://localhost:3000"
+    - "http://localhost:5173"
 
 jwt:
   secret: ${JWT_SECRET}

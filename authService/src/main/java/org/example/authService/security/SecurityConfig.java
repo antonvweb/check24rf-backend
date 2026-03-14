@@ -1,10 +1,10 @@
 package org.example.authService.security;
 
 import org.example.common.security.JwtFilter;
+import org.example.common.security.RateLimitFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,7 +25,6 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
     }
 
-    // Публичные эндпоинты без аутентификации
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
             "/api/auth/send-code",
             "/api/auth/verify",
@@ -33,6 +32,16 @@ public class SecurityConfig {
             "/api/auth/refresh",
             "/api/auth/csrf-token"
     );
+
+    @Bean
+    public RateLimitFilter rateLimitFilter() {
+        return new RateLimitFilter(10.0, List.of(
+                new RateLimitFilter.PathRateLimit("/api/auth/send-code", 2.0),
+                new RateLimitFilter.PathRateLimit("/api/auth/verify", 3.0),
+                new RateLimitFilter.PathRateLimit("/api/auth/verify-captcha", 5.0),
+                new RateLimitFilter.PathRateLimit("/api/auth/refresh", 5.0)
+        ));
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -45,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(rateLimitFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())

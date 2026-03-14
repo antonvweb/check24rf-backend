@@ -5,7 +5,6 @@ WORKDIR /build
 COPY pom.xml /build/
 COPY common /build/common
 COPY mcoService /build/mcoService
-COPY adminPanelService /build/adminPanelService
 COPY userService /build/userService
 COPY authService /build/authService
 RUN mvn clean package -f /build/pom.xml -pl authService -am -DskipTests
